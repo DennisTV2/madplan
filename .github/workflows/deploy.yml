@@ -1,0 +1,34 @@
+name: Deploy MadPlan til Simply.com
+
+on:
+  push:
+    branches:
+      - main  # Kør deploy hver gang du pusher til main
+
+jobs:
+  deploy:
+    name: 🚀 Deploy til madplan.birkebøg.dk
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Hent kode fra GitHub
+        uses: actions/checkout@v4
+
+      - name: 📡 Upload til Simply.com via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          # Simply.com subdomæne peger på /madplan
+          server-dir: /madplan/
+          local-dir: ./
+          # Undgå at uploade GitHub-specifikke filer
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            README.md
+
+      - name: ✅ Deploy fuldført
+        run: echo "MadPlan er live på madplan.birkebøg.dk 🌿"
