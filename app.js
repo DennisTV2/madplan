@@ -15,32 +15,8 @@ let kidsAge = '6-9';
 let kidsOptions = new Set(['vask-skær', 'røre-blande']);
 
 // Load from localStorage
-let users    = JSON.parse(localStorage.getItem('mp_users') || '[]');
-let history  = JSON.parse(localStorage.getItem('mp_history') || '[]');
-let apiKey   = localStorage.getItem('mp_api_key') || '';
-
-// ─── API KEY ─────────────────────────────────────────────────────────────────
-
-function saveApiKey() {
-  const val = document.getElementById('api-key-input').value.trim();
-  if (!val.startsWith('sk-ant-')) {
-    document.getElementById('api-key-status').textContent = '⚠️ Nøglen ser ikke korrekt ud (skal starte med sk-ant-)';
-    document.getElementById('api-key-status').style.color = 'var(--coral-600)';
-    return;
-  }
-  apiKey = val;
-  localStorage.setItem('mp_api_key', apiKey);
-  document.getElementById('api-key-status').textContent = '✅ Gemt!';
-  document.getElementById('api-key-status').style.color = 'var(--green-600)';
-}
-
-function loadApiKeyField() {
-  if (apiKey) {
-    document.getElementById('api-key-input').value = apiKey;
-    document.getElementById('api-key-status').textContent = '✅ Nøgle indlæst';
-    document.getElementById('api-key-status').style.color = 'var(--green-600)';
-  }
-}
+let users   = JSON.parse(localStorage.getItem('mp_users') || '[]');
+let history = JSON.parse(localStorage.getItem('mp_history') || '[]');
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 
@@ -104,7 +80,6 @@ function enterApp() {
   if (def.days)    document.getElementById('default-days').value    = def.days;
   if (def.persons) document.getElementById('default-persons').value = def.persons;
 
-  loadApiKeyField();
   loadHistory();
   updateStats();
   showPage('plan');
@@ -252,11 +227,6 @@ function gatherSettings() {
 // ─── GENERATE PLAN ────────────────────────────────────────────────────────────
 
 async function generatePlan() {
-  if (!apiKey) {
-    alert('Indtast din Anthropic API-nøgle øverst på siden.');
-    document.getElementById('api-key-input').focus();
-    return;
-  }
 
   const settings = gatherSettings();
 
@@ -367,6 +337,26 @@ ${settings.dietTags.length ? '• Kostpræferencer (OBLIGATORISK overhold): ' + 
 ${settings.pantry.length ? '• Basislager hjemme – KØB IKKE disse: ' + settings.pantry.join(', ') : ''}
 ${includeRules ? '• SKAL indgå i planen: ' + includeRules : ''}
 ${excludeRules ? '• MÅ ALDRIG bruges – allergi/fravalg: ' + excludeRules : ''}
+${settings.kids.enabled ? `
+════════════════════════════════════
+LAV MAD MED BØRN — OBLIGATORISKE TRIN
+════════════════════════════════════
+
+Barnets alder: ${settings.kids.age} år
+Barnets bidrag: ${settings.kids.skills.join(', ')}
+
+For HVER aftensmadsret skal du tilføje et ekstra felt "kids_activity" i JSON-outputtet med:
+• En kort, alderssvarende opgave barnet kan løse (maks 2 sætninger)
+• Brug simple ord og konkrete handlinger
+• Match opgaven til barnets bidragsniveau: ${settings.kids.skills.join(', ')}
+
+Eksempel for alder ${settings.kids.age} år:
+- "vask-skær" → "Vask karruerne under den kolde vandhane og hjælp med at rive dem i stykker"
+- "røre-blande" → "Rør saucen rundt med træskeen mens den bobler – tæl til 20 hvert omrøring!"
+- "komfur" → "Hjælp en voksen med at vende kødet i panden – hold godt fat i grebet"
+- "anrette" → "Pynt tallerknerne med et par blade frisk basilikum og drys parmesan på"
+
+Vælg aktiviteter der passer til alderen – for 3-5 år: enkle og sikre opgaver uden varme; for 14+: selvstændige trin.` : ''}
 
 ════════════════════════════════════
 TILBUDSAVISER DENNE UGE
@@ -441,7 +431,8 @@ Svar UDELUKKENDE med ét valid JSON-objekt. Ingen markdown. Ingen backticks. Ing
           "price_per_person": 28,
           "tags": ["Familiefavorit", "Fryseegnet"],
           "on_sale": true,
-          "tip": "Lav dobbelt portion og frys den ene halvdel – perfekt til en travl dag"
+          "tip": "Lav dobbelt portion og frys den ene halvdel – perfekt til en travl dag",
+          "kids_activity": "Riv osten og drys den over spaghettien – se den smelte ned i den varme sauce!"
         }
       ]
     }
@@ -463,14 +454,9 @@ Svar UDELUKKENDE med ét valid JSON-objekt. Ingen markdown. Ingen backticks. Ing
 }`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('proxy.php', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 8000,
@@ -604,6 +590,9 @@ function renderPlan(plan) {
       const tipHtml = meal.tip
         ? `<div style="margin-top:8px;font-size:12px;color:var(--teal-600);background:var(--teal-50);padding:6px 10px;border-radius:6px;border-left:3px solid var(--teal-200)">💡 ${meal.tip}</div>`
         : '';
+      const kidsHtml = meal.kids_activity
+        ? `<div style="margin-top:8px;font-size:12px;color:#7c5c1e;background:#fef9ec;padding:6px 10px;border-radius:6px;border-left:3px solid #f5d57a">👨‍🍳 <strong>Børneopgave:</strong> ${meal.kids_activity}</div>`
+        : '';
 
       html += `
         <div class="meal-row">
@@ -613,6 +602,7 @@ function renderPlan(plan) {
             <div class="meal-detail">${meal.description || ''}</div>
             <div class="meal-badges">${saleTag}${storeTag}${tags}</div>
             ${tipHtml}
+            ${kidsHtml}
           </div>
           <div class="meal-price">${meal.price_per_person ? meal.price_per_person + ' kr/p' : ''}</div>
         </div>`;
