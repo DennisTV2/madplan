@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MadPlan — AI-drevet madplanlægger</title>
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-emblem">🌿</div>
+    <div class="auth-logo">Mad<em>Plan</em></div>
+    <div class="auth-sub">Smart madplanlægning med de bedste tilbud</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Log ind</button>
+      <button class="auth-tab" onclick="switchTab('signup')">Opret konto</button>
+    </div>
+    <div id="login-form">
+      <div class="input-group"><label>E-mail</label><input type="email" id="login-email" placeholder="din@email.dk" value="demo@madplan.dk"></div>
+      <div class="input-group"><label>Adgangskode</label><input type="password" id="login-pass" placeholder="••••••••" value="demo123"></div>
+      <button class="btn-primary" onclick="doLogin()">Log ind</button>
+      <div class="demo-hint">Brug <strong>demo@madplan.dk</strong> / <strong>demo123</strong> for at prøve</div>
+    </div>
+    <div id="signup-form" style="display:none">
+      <div class="input-group"><label>Navn</label><input type="text" id="signup-name" placeholder="Dit navn"></div>
+      <div class="input-group"><label>E-mail</label><input type="email" id="signup-email" placeholder="din@email.dk"></div>
+      <div class="input-group"><label>Adgangskode</label><input type="password" id="signup-pass" placeholder="Min. 6 tegn"></div>
+      <button class="btn-primary" onclick="doSignup()">Opret konto</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen" style="display:none">
+
+  <!-- TOP HEADER -->
+  <header class="app-header">
+    <div class="app-logo">Mad<em>Plan</em></div>
+    <div class="header-avatar" id="nav-avatar" onclick="showPage('profile')">DM</div>
+  </header>
+
+  <!-- PAGES -->
+  <div class="pages-wrap">
+
+      <!-- PAGE: NY MADPLAN -->
+      <div class="page active" id="page-plan">
+        <div class="page-head">
+          <div class="page-title">Ny madplan</div>
+          <div class="page-sub">Tilpas din uge og lad AI finde de bedste måltider til prisen</div>
+        </div>
+
+        <!-- API KEY -->
+        <div class="section" id="api-section">
+          <div class="section-title"><span class="section-icon">🔑</span> Anthropic API-nøgle</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:0.75rem">Påkrævet for at generere madplaner med AI. <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">Hent din nøgle her →</a></div>
+          <div class="input-group" style="margin:0">
+            <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:13px">
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+            <button onclick="saveApiKey()" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);font-family:var(--font-body);font-size:13px;cursor:pointer">Gem nøgle</button>
+            <span id="api-key-status" style="font-size:13px;color:var(--muted)"></span>
+          </div>
+        </div>
+
+        <!-- BUTIKKER -->
+        <div class="section">
+          <div class="section-title"><span class="section-icon">🏪</span> Vælg butikker</div>
+          <div class="grid-4" id="shops-grid">
+            <div class="shop-card selected" data-shop="netto" onclick="toggleShop(this)">
+              <div class="shop-logo">🟡</div>
+              <div class="shop-name">Netto</div>
+              <div class="shop-badge">Tilbud aktive</div>
+            </div>
+            <div class="shop-card selected" data-shop="rema" onclick="toggleShop(this)">
+              <div class="shop-logo">🔴</div>
+              <div class="shop-name">Rema 1000</div>
+              <div class="shop-badge">Tilbud aktive</div>
+            </div>
+            <div class="shop-card" data-shop="lidl" onclick="toggleShop(this)">
+              <div class="shop-logo">🔵</div>
+              <div class="shop-name">Lidl</div>
+              <div class="shop-badge">Beta</div>
+            </div>
+            <div class="shop-card" data-shop="365" onclick="toggleShop(this)">
+              <div class="shop-logo">🟢</div>
+              <div class="shop-name">365discount</div>
+              <div class="shop-badge">Beta</div>
+            </div>
+            <div class="shop-card" data-shop="fakta" onclick="toggleShop(this)">
+              <div class="shop-logo">🟠</div>
+              <div class="shop-name">Spar</div>
+              <div class="shop-badge">Beta</div>
+            </div>
+            <div class="shop-card" data-shop="meny" onclick="toggleShop(this)">
+              <div class="shop-logo">⚫</div>
+              <div class="shop-name">Meny</div>
+              <div class="shop-badge">Beta</div>
+            </div>
+            <div class="shop-card" data-shop="aldi" onclick="toggleShop(this)">
+              <div class="shop-logo">🔷</div>
+              <div class="shop-name">Aldi</div>
+              <div class="shop-badge">Beta</div>
+            </div>
+            <div class="shop-card" data-shop="coop" onclick="toggleShop(this)">
+              <div class="shop-logo">🟣</div>
+              <div class="shop-name">Coop</div>
+              <div class="shop-badge">Beta</div>
+            </div>
+          </div>
+
+          <div style="margin-top:1rem">
+            <div class="section-title" style="margin-bottom:0.75rem">🏷️ Aktuelle tilbud (simulerede)</div>
+            <div class="offers-row">
+              <span class="offer-chip netto">Netto: Kylling 29kr/kg</span>
+              <span class="offer-chip netto">Netto: Pasta 8kr</span>
+              <span class="offer-chip netto">Netto: Tomater 2/25kr</span>
+              <span class="offer-chip netto">Netto: Hakkebøf 35kr/500g</span>
+              <span class="offer-chip rema">Rema: Laks 49kr/stk</span>
+              <span class="offer-chip rema">Rema: Havregryn 12kr</span>
+              <span class="offer-chip rema">Rema: Æg 10stk 20kr</span>
+              <span class="offer-chip rema">Rema: Ris 12kr/kg</span>
+              <span class="offer-chip lidl">Lidl: Broccoli 9kr</span>
+              <span class="offer-chip lidl">Lidl: Svinekød 35kr/kg</span>
+              <span class="offer-chip lidl">Lidl: Spinat 12kr</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- DAGE & PERSONER -->
+        <div class="section">
+          <div class="section-title"><span class="section-icon">📊</span> Planlæg ugen</div>
+          <div class="grid-2">
+            <div>
+              <div class="field-label">Antal dage</div>
+              <div class="counter">
+                <button class="counter-btn" onclick="adjustDays(-1)">−</button>
+                <div class="counter-val" id="days-val">7</div>
+                <button class="counter-btn" onclick="adjustDays(1)">+</button>
+                <span class="counter-label">dage</span>
+              </div>
+            </div>
+            <div>
+              <div class="field-label">Antal personer</div>
+              <div class="counter">
+                <button class="counter-btn" onclick="adjustPersons(-1)">−</button>
+                <div class="counter-val" id="persons-val">2</div>
+                <button class="counter-btn" onclick="adjustPersons(1)">+</button>
+                <span class="counter-label">pers.</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:1.25rem">
+            <div class="field-label">Inkludér måltider</div>
+            <div class="tag-row" id="meal-types">
+              <div class="tag active" onclick="this.classList.toggle('active')">Morgenmad</div>
+              <div class="tag" onclick="this.classList.toggle('active')">Frokost</div>
+              <div class="tag active" onclick="this.classList.toggle('active')">Aftensmad</div>
+              <div class="tag" onclick="this.classList.toggle('active')">Snacks</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- OPTIMERING -->
+        <div class="section">
+          <div class="section-title"><span class="section-icon">💡</span> Optimeringsvalg</div>
+          <div class="opt-grid">
+            <div class="opt-btn active" id="opt-cheap" onclick="selectOpt('cheap')">
+              <div class="opt-btn-title">💰 Gør det billigst</div>
+              <div class="opt-btn-desc">Spred indkøb på tværs af tilbud fra alle valgte butikker</div>
+            </div>
+            <div class="opt-btn" id="opt-one" onclick="selectOpt('one')">
+              <div class="opt-btn-title">🏪 Billigste enkeltbutik</div>
+              <div class="opt-btn-desc">Alt i én tur – find den butik hvor det samlede indkøb er billigst</div>
+            </div>
+            <div class="opt-btn" id="opt-balanced" onclick="selectOpt('balanced')">
+              <div class="opt-btn-title">⚖️ Pris + variation</div>
+              <div class="opt-btn-desc">God balance mellem lav pris og alsidighed i madplanen</div>
+            </div>
+            <div class="opt-btn" id="opt-quality" onclick="selectOpt('quality')">
+              <div class="opt-btn-title">⭐ Kvalitet først</div>
+              <div class="opt-btn-desc">Bedste råvarer inden for budgettet – sæson og friskhed vægtes</div>
+            </div>
+          </div>
+          <div style="margin-top:1.25rem">
+            <div class="field-label">Max budget (valgfri)</div>
+            <div class="budget-row">
+              <span class="budget-currency">kr</span>
+              <input type="number" id="budget-input" placeholder="f.eks. 800" min="0" step="50">
+              <span class="budget-hint">pr. uge i alt</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- KOSTPRÆFERENCER -->
+        <div class="section">
+          <div class="section-title"><span class="section-icon">🏷️</span> Kostpræferencer</div>
+          <div class="tag-row" id="diet-tags">
+            <div class="tag" onclick="this.classList.toggle('active')">🌿 Økologisk</div>
+            <div class="tag" onclick="this.classList.toggle('active')">🌾 Glutenfrit</div>
+            <div class="tag" onclick="this.classList.toggle('active')">🥗 Kalorielet</div>
+            <div class="tag" onclick="this.classList.toggle('active')">💪 Proteinfokus</div>
+            <div class="tag" onclick="this.classList.toggle('active')">🥕 Vegetarisk</div>
+            <div class="tag" onclick="this.classList.toggle('active')">🌱 Vegansk</div>
+            <div class="tag" onclick="this.classList.toggle('active')">🫀 Hjertesundt</div>
+            <div class="tag" onclick="this.classList.toggle('active')">🍚 Low carb</div>
+            <div class="tag" onclick="this.classList.toggle('active')">🕌 Halal</div>
+            <div class="tag" onclick="this.classList.toggle('active')">✡️ Kosher</div>
+            <div class="tag" onclick="this.classList.toggle('active')">🥜 Nøddeallergi</div>
+            <div class="tag" onclick="this.classList.toggle('active')">🐄 Laktosefri</div>
+          </div>
+        </div>
+
+        <!-- INKLUDER / EKSKLUDER -->
+        <div class="section">
+          <div class="section-title"><span class="section-icon">✅</span> Inkluder / ekskluder ingredienser</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:0.75rem">
+            Angiv hvad der <strong>skal</strong> med og hvad der <strong>aldrig</strong> må bruges. Antal = hvor mange retter pr. uge.
+          </div>
+          <div id="prefs-list">
+            <div class="pref-row">
+              <select class="pref-type">
+                <option value="include">✅ Inkluder</option>
+                <option value="exclude">🚫 Ekskluder</option>
+              </select>
+              <input type="text" placeholder="f.eks. laks, rødbeder, nødder...">
+              <input type="number" class="pref-count" placeholder="× retter" min="1" max="14" title="Antal retter pr. uge der skal/ikke må indeholde dette">
+              <button class="remove-btn" onclick="removePref(this)">×</button>
+            </div>
+          </div>
+          <button class="add-btn" onclick="addPref()">+ Tilføj regel</button>
+        </div>
+
+        <!-- BASISLAGER -->
+        <div class="section">
+          <div class="section-title"><span class="section-icon">🥫</span> Mit basislager</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:0.75rem">
+            Råvarer du altid har hjemme – disse trækkes fra indkøbslisten
+          </div>
+          <div id="pantry-list">
+            <div class="ingredient-row"><input type="text" value="Olivenolie"><button class="remove-btn" onclick="this.parentNode.remove()">×</button></div>
+            <div class="ingredient-row"><input type="text" value="Salt & peber"><button class="remove-btn" onclick="this.parentNode.remove()">×</button></div>
+            <div class="ingredient-row"><input type="text" value="Løg"><button class="remove-btn" onclick="this.parentNode.remove()">×</button></div>
+            <div class="ingredient-row"><input type="text" value="Hvidløg"><button class="remove-btn" onclick="this.parentNode.remove()">×</button></div>
+            <div class="ingredient-row"><input type="text" value="Eddike"><button class="remove-btn" onclick="this.parentNode.remove()">×</button></div>
+          </div>
+          <button class="add-btn" onclick="addPantryItem()">+ Tilføj råvare</button>
+        </div>
+
+        <!-- LAV MAD MED BØRN -->
+        <div class="section kids-section">
+          <div class="kids-header">
+            <div class="section-title" style="margin-bottom:0"><span class="section-icon">👨‍👩‍👧</span> Lav mad med børn</div>
+            <label class="kids-toggle">
+              <input type="checkbox" id="kids-toggle-cb" onchange="toggleKids()">
+              <span class="kids-toggle-track"></span>
+            </label>
+          </div>
+          <div class="kids-body" id="kids-body" style="display:none">
+            <div class="field-label" style="margin-top:1rem">Barnets alder</div>
+            <div class="kids-ages" id="kids-ages">
+              <button class="kids-age-btn" data-age="3-5" onclick="selectAge(this)">3–5 år</button>
+              <button class="kids-age-btn" data-age="6-9" onclick="selectAge(this)">6–9 år</button>
+              <button class="kids-age-btn" data-age="10-13" onclick="selectAge(this)">10–13 år</button>
+              <button class="kids-age-btn" data-age="14+" onclick="selectAge(this)">14+ år</button>
+            </div>
+            <div class="field-label" style="margin-top:1rem">Barnet kan hjælpe med</div>
+            <div class="kids-skills" id="kids-skills">
+              <span class="kids-skill-chip" data-skill="wash-cut" onclick="toggleKidsOpt(this)">🥦 Vaske &amp; skære</span>
+              <span class="kids-skill-chip" data-skill="mix-stir" onclick="toggleKidsOpt(this)">🥣 Røre &amp; blande</span>
+              <span class="kids-skill-chip" data-skill="stove-oven" onclick="toggleKidsOpt(this)">🔥 Komfur &amp; ovn</span>
+              <span class="kids-skill-chip" data-skill="plate-decorate" onclick="toggleKidsOpt(this)">🍽️ Anrette &amp; pynte</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- GENERER -->
+        <button class="gen-btn" id="gen-btn" onclick="generatePlan()">
+          <span id="gen-btn-text">✨ Generer min madplan</span>
+        </button>
+        <div style="height:2rem"></div>
+      </div>
+
+      <!-- PAGE: MADPLAN RESULTAT -->
+      <div class="page" id="page-result">
+        <div id="result-empty" class="empty-state">
+          <div class="empty-icon">🍽️</div>
+          <div class="empty-text">Ingen madplan endnu</div>
+          <div class="empty-sub">Gå til "Ny madplan" og lad AI lave en for dig</div>
+        </div>
+        <div id="result-loading" style="display:none">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <div class="loading-text">Laver din madplan...</div>
+            <div class="loading-sub" id="loading-msg">Henter ugens tilbud</div>
+          </div>
+        </div>
+        <div id="plan-output" style="display:none"></div>
+      </div>
+
+      <!-- PAGE: HISTORIK -->
+      <div class="page" id="page-history">
+        <div class="page-head">
+          <div class="page-title">Min historik</div>
+          <div class="page-sub">Dine tidligere madplaner</div>
+        </div>
+        <div id="history-list"></div>
+      </div>
+
+      <!-- PAGE: PROFIL -->
+      <div class="page" id="page-profile">
+        <div class="page-head">
+          <div class="page-title">Min profil</div>
+          <div class="page-sub">Konto og statistik</div>
+        </div>
+        <div class="profile-section" style="display:flex;align-items:center;gap:1.5rem">
+          <div class="profile-avatar-big" id="profile-avatar">DM</div>
+          <div>
+            <div class="profile-name" id="profile-name">Demo Bruger</div>
+            <div class="profile-email-text" id="profile-email">demo@madplan.dk</div>
+            <div class="profile-joined">Oprettet: maj 2025</div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <div class="section-title">📊 Statistik</div>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-num" id="stat-plans">0</div><div class="stat-lbl">Madplaner lavet</div></div>
+            <div class="stat-card"><div class="stat-num" id="stat-saved">0 kr</div><div class="stat-lbl">Estimeret spart</div></div>
+            <div class="stat-card"><div class="stat-num" id="stat-meals">0</div><div class="stat-lbl">Måltider planlagt</div></div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <div class="section-title">⚙️ Standardindstillinger</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="input-group" style="margin:0">
+              <label>Standard antal personer</label>
+              <input type="number" id="default-persons" value="2" min="1" max="20" style="width:80px" onchange="saveDefaults()">
+            </div>
+            <div class="input-group" style="margin:0">
+              <label>Standard antal dage</label>
+              <input type="number" id="default-days" value="7" min="1" max="14" style="width:80px" onchange="saveDefaults()">
+            </div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <div class="section-title" style="color:var(--coral-600)">⚠️ Fare zone</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button onclick="clearHistory()" style="padding:10px 20px;background:transparent;border:1.5px solid var(--coral-400);border-radius:var(--r-sm);color:var(--coral-600);font-family:var(--font-body);font-size:14px;cursor:pointer">Slet al historik</button>
+            <button onclick="doLogout()" style="padding:10px 20px;background:transparent;border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--muted);font-family:var(--font-body);font-size:14px;cursor:pointer">Log ud</button>
+          </div>
+        </div>
+      </div>
+
+  </div><!-- .pages-wrap -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <div class="nav-tab active" id="tab-plan" onclick="showPage('plan')">
+      <span class="tab-icon">📅</span>
+      <span>Plan</span>
+    </div>
+    <div class="nav-tab" id="tab-result" onclick="showPage('result')">
+      <span class="tab-icon">🍽️</span>
+      <span>Opskrifter</span>
+    </div>
+    <div class="nav-tab" id="tab-history" onclick="showPage('history')">
+      <span class="tab-icon">🛒</span>
+      <span>Indkøb</span>
+    </div>
+    <div class="nav-tab" id="tab-profile" onclick="showPage('profile')">
+      <span class="tab-icon">👤</span>
+      <span>Profil</span>
+    </div>
+  </nav>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
