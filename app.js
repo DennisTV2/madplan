@@ -156,12 +156,12 @@ function doSignup() {
 function enterApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-screen').style.display  = '';
+  document.getElementById('bottom-nav').style.display  = 'flex';
 
   const initials = currentUser.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-  document.getElementById('nav-avatar').textContent   = initials;
-  document.getElementById('nav-name').textContent     = currentUser.name;
-  document.getElementById('nav-email').textContent    = currentUser.email;
+  const navAvatar = document.getElementById('nav-avatar');
+  if (navAvatar) navAvatar.textContent = initials;
   document.getElementById('profile-avatar').textContent = initials;
   document.getElementById('profile-name').textContent   = currentUser.name;
   document.getElementById('profile-email').textContent  = currentUser.email;
@@ -184,6 +184,7 @@ function doLogout() {
   currentPlan = null;
   document.getElementById('auth-screen').style.display = '';
   document.getElementById('app-screen').style.display  = 'none';
+  document.getElementById('bottom-nav').style.display  = 'none';
   document.getElementById('plan-output').style.display = 'none';
   document.getElementById('result-empty').style.display = '';
 }
@@ -191,17 +192,21 @@ function doLogout() {
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
 
 function showPage(page) {
-  document.querySelectorAll('.page').forEach(p      => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n  => n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#bottom-nav .nav-item').forEach(n => n.classList.remove('active'));
 
-  document.getElementById('page-' + page).classList.add('active');
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
 
-  const navMap = { plan: 0, result: 1, history: 2, madpakker: 3, profile: 4 };
-  const navItems = document.querySelectorAll('.nav-item');
-  if (navMap[page] !== undefined) navItems[navMap[page]].classList.add('active');
+  // plan and result both highlight the Plan tab
+  const navMap = { plan: 0, result: 0, opskrifter: 1, indkob: 2, profile: 3 };
+  const navItems = document.querySelectorAll('#bottom-nav .nav-item');
+  if (navMap[page] !== undefined) navItems[navMap[page]]?.classList.add('active');
 
   if (page === 'history') renderHistory();
-  if (page === 'result' && currentPlan) renderPlan(currentPlan);
+  if (page === 'result' && currentPlan) { renderPlan(currentPlan); loadPlanPhotos(); }
+  if (page === 'opskrifter') renderRecipeCatalog();
+  if (page === 'indkob') renderIndkob();
 }
 
 // ─── CONTROLS ─────────────────────────────────────────────────────────────────
@@ -581,6 +586,7 @@ Svar UDELUKKENDE med ét valid JSON-objekt. Ingen markdown. Ingen backticks. Ing
 
     document.getElementById('result-loading').style.display = 'none';
     renderPlan(parsed);
+    loadPlanPhotos();
     updateStats();
 
   } catch (e) {
@@ -665,6 +671,10 @@ function renderPlan(plan) {
   (plan.plan || []).forEach((day, dayIdx) => {
     html += `
       <div class="day-card">
+        <div class="day-card-photo-wrap" id="photo-day-${day.day}">
+          <div class="day-card-photo-placeholder">${getDayEmoji(day.day)}</div>
+        </div>
+        <div class="day-card-body">
         <div class="day-label">Dag ${day.day}</div>
         <div class="day-date">${day.label || 'Dag ' + day.day}</div>`;
 
@@ -699,7 +709,7 @@ function renderPlan(plan) {
         </div>`;
     });
 
-    html += '</div>';
+    html += '</div></div>'; // close day-card-body + day-card
   });
 
   // Shopping list
@@ -1324,6 +1334,178 @@ function scoreRecipesAgainstOffers(shops) {
     })
     .filter(r => r.score > 0)
     .sort((a, b) => b.score - a.score);
+}
+
+// ─── FOOD PHOTOS ──────────────────────────────────────────────────────────────
+
+function getDayEmoji(dayNum) {
+  const emojis = ['🍽️','🥘','🍲','🫕','🥗','🍱','🫔','🥙','🍜','🥩','🐟','🥚','🧆','🌮'];
+  return emojis[(dayNum - 1) % emojis.length];
+}
+
+function getPhotoQuery(mealName) {
+  const n = mealName.toLowerCase();
+  if (n.includes('pasta') || n.includes('spaghetti') || n.includes('lasagne') || n.includes('carbonara') || n.includes('bolognese') || n.includes('penne')) return 'pasta italian food';
+  if (n.includes('pizza')) return 'pizza';
+  if (n.includes('tikka') || n.includes('karry') || n.includes('curry') || n.includes('dahl')) return 'curry dish';
+  if (n.includes('kylling') || n.includes('chicken')) return 'chicken dinner';
+  if (n.includes('laks') || n.includes('salmon')) return 'salmon fillet';
+  if (n.includes('torsk') || n.includes('fisk') || n.includes('fiskefilet')) return 'fish fillet dinner';
+  if (n.includes('frikadeller') || n.includes('kødboller')) return 'meatballs dinner';
+  if (n.includes('bøf') || n.includes('steak') || n.includes('okse')) return 'beef steak dinner';
+  if (n.includes('burger')) return 'hamburger';
+  if (n.includes('tacos') || n.includes('taco') || n.includes('wrap') || n.includes('tortilla')) return 'tacos mexican food';
+  if (n.includes('wok') || n.includes('sushi')) return 'asian food wok';
+  if (n.includes('suppe')) return 'soup bowl';
+  if (n.includes('salat')) return 'salad fresh bowl';
+  if (n.includes('grød')) return 'oatmeal porridge bowl';
+  if (n.includes('æg') || n.includes('omelet') || n.includes('shakshuka')) return 'eggs breakfast';
+  if (n.includes('svin') || n.includes('flæsk') || n.includes('bacon')) return 'pork dinner';
+  if (n.includes('pølse')) return 'sausage dinner';
+  if (n.includes('ris')) return 'rice dish';
+  return 'food dinner plate homemade';
+}
+
+async function fetchMealPhoto(mealName) {
+  const key = 'mp_photo_' + mealName.toLowerCase().replace(/[^a-z0-9æøå]/g, '_').slice(0, 60);
+  try {
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      const { data, ts } = JSON.parse(cached);
+      if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) return data; // 7-day TTL
+    }
+  } catch { /* ignore */ }
+  try {
+    const res = await fetch('photo.php?q=' + encodeURIComponent(getPhotoQuery(mealName)));
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.error) return null;
+    localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+async function loadPlanPhotos() {
+  if (!currentPlan?.plan) return;
+  for (const day of currentPlan.plan) {
+    const dinner = (day.meals || []).find(m => m.type === 'Aftensmad');
+    if (!dinner) continue;
+    const slot = document.getElementById('photo-day-' + day.day);
+    if (!slot) continue;
+    const photo = await fetchMealPhoto(dinner.name);
+    if (photo?.url) {
+      slot.innerHTML = `<img class="day-card-photo" src="${photo.url}" alt="${dinner.name}" loading="lazy">
+        <div class="day-card-photo-credit"><a href="${photo.link}" target="_blank" rel="noopener noreferrer">${photo.credit}</a></div>`;
+    }
+  }
+}
+
+// ─── RECIPE CATALOG ───────────────────────────────────────────────────────────
+
+let activeRecipeCategory = null;
+
+function renderRecipeCatalog() {
+  renderRecipeCategoryFilter();
+  renderRecipeGrid();
+}
+
+function renderRecipeCategoryFilter() {
+  const filterRow = document.getElementById('cat-filter-row');
+  if (!filterRow) return;
+  const categories = [...new Set(RECIPES.map(r => r.category))];
+  filterRow.innerHTML =
+    `<button class="cat-chip${activeRecipeCategory === null ? ' active' : ''}" onclick="filterRecipes(null)">Alle</button>` +
+    categories.map(cat =>
+      `<button class="cat-chip${activeRecipeCategory === cat ? ' active' : ''}" onclick="filterRecipes('${cat}')">${catDanish(cat)}</button>`
+    ).join('');
+}
+
+function renderRecipeGrid() {
+  const container = document.getElementById('recipes-grid');
+  if (!container) return;
+  const filtered = activeRecipeCategory ? RECIPES.filter(r => r.category === activeRecipeCategory) : RECIPES;
+  container.innerHTML = `<div class="recipe-grid">${filtered.map(r => `
+    <div class="recipe-card">
+      <div class="recipe-card-photo-placeholder">${getCategoryEmoji(r.category)}</div>
+      <div class="recipe-card-body">
+        <div class="recipe-card-name">${r.name}</div>
+        <div class="recipe-card-tags">${r.tags.slice(0, 2).map(t => `<span class="cat-chip">${t}</span>`).join('')}</div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function filterRecipes(category) {
+  activeRecipeCategory = category;
+  renderRecipeCategoryFilter();
+  renderRecipeGrid();
+}
+
+function catDanish(cat) {
+  const map = { klassisk: 'Klassisk', kød: 'Kød', internationalt: 'International', pasta: 'Pasta', vegetar: 'Vegetar', fisk: 'Fisk' };
+  return map[cat] || cat.charAt(0).toUpperCase() + cat.slice(1);
+}
+
+function getCategoryEmoji(category) {
+  const map = { klassisk: '🥘', kød: '🥩', internationalt: '🌍', pasta: '🍝', vegetar: '🥗', fisk: '🐟' };
+  return map[category] || '🍽️';
+}
+
+// ─── INDKØB PAGE ──────────────────────────────────────────────────────────────
+
+function renderIndkob() {
+  const container = document.getElementById('indkob-content');
+  if (!container) return;
+
+  if (!currentPlan?.shopping_list?.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🛒</div>
+        <div class="empty-text">Ingen indkøbsliste endnu</div>
+        <div class="empty-sub">Generer en madplan under Plan for at se din indkøbsliste her</div>
+        <button onclick="showPage('plan')" class="btn-primary" style="margin-top:1.25rem">Gå til Plan</button>
+      </div>`;
+    return;
+  }
+
+  const storeColors = { 'Netto': 'amber', 'Rema 1000': 'coral', 'Lidl': 'teal', '365discount': 'green', 'Spar': 'amber', 'Meny': 'gray', 'Aldi': 'teal', 'Coop': 'teal' };
+  let html = '';
+
+  if (currentPlan.total_price) {
+    html += `<div class="total-bar" style="margin-bottom:1.5rem">
+      <div class="total-label">Estimeret total indkøb</div>
+      <div class="total-amount">${currentPlan.total_price} kr</div>
+    </div>`;
+  }
+
+  (currentPlan.shopping_list || []).forEach(store => {
+    const col = storeColors[store.store] || 'gray';
+    const total = (store.items || []).reduce((s, i) => s + (i.price || 0), 0);
+    html += `<div class="shop-section">
+      <div class="shop-section-name">
+        ${store.store}
+        <span class="shop-section-badge badge badge-${col}">${(store.items || []).length} varer</span>
+        ${total ? `<span style="margin-left:auto;font-size:13px;font-weight:500;color:var(--primary)">~${total} kr</span>` : ''}
+      </div>`;
+    (store.items || []).forEach((item, i) => {
+      const id = 'ib_' + store.store.replace(/\s/g, '') + '_' + i;
+      const sale = item.on_sale ? ' <span class="badge badge-amber" style="font-size:10px;padding:1px 7px">Tilbud</span>' : '';
+      html += `<div class="shop-item" id="row_${id}">
+        <div class="shop-cb" id="${id}" onclick="toggleItem('${id}')"></div>
+        <div class="shop-item-name">${item.name}${sale}</div>
+        <div class="shop-item-amount">${item.amount || ''}</div>
+        <div class="shop-item-price">${item.price ? item.price + ' kr' : ''}</div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  html += `<div style="margin-top:1rem">
+    <button class="action-btn" style="width:100%;justify-content:center" onclick="exportShoppingList(window.currentPlan)">📋 Eksportér indkøbsliste</button>
+  </div>`;
+
+  container.innerHTML = html;
 }
 
 // ─── KEYBOARD SHORTCUTS ──────────────────────────────────────────────────────
