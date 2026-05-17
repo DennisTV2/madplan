@@ -38,7 +38,8 @@ const SHOP_QUERIES = [
     'lidl'   => 'Lidl',
     'fakta'  => 'Spar',
     'meny'   => 'Meny',
-    'aldi'   => 'Aldi',
+    'bilka'  => 'Bilka',
+    'fotex'  => 'Føtex',
     'coop'   => 'Coop',
     '365'    => '365discount',
 ];
