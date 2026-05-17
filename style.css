@@ -1417,6 +1417,185 @@ select {
 }
 
 /* ═══════════════════
+   RECIPE SEARCH
+   ═══════════════════ */
+
+.recipe-search-wrap {
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.recipe-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.recipe-search {
+  width: 100%;
+  padding: 11px 14px 11px 40px;
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--r-full);
+  background: var(--card);
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.recipe-search::placeholder { color: var(--light); }
+
+.recipe-search:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.12);
+}
+
+/* clear button (WebKit) */
+.recipe-search::-webkit-search-cancel-button { cursor: pointer; }
+
+/* ═══════════════════
+   RECIPE CARD ARROW
+   ═══════════════════ */
+
+.recipe-card-arrow {
+  font-size: 1.4rem;
+  color: var(--slate-300);
+  flex-shrink: 0;
+  line-height: 1;
+  margin-left: auto;
+  padding-left: 4px;
+}
+
+/* ═══════════════════
+   SHOPPING CTA
+   ═══════════════════ */
+
+.shopping-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--primary-bg);
+  border: 1.5px solid var(--primary-border);
+  border-radius: var(--r-lg);
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.shopping-cta:hover {
+  background: #dcfce7;
+  box-shadow: 0 2px 12px rgba(34,197,94,0.15);
+}
+
+.shopping-cta-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.shopping-cta-icon {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}
+
+.shopping-cta-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-darker);
+}
+
+.shopping-cta-sub {
+  font-size: 12px;
+  color: var(--primary-dark);
+  margin-top: 2px;
+}
+
+.shopping-cta-arrow {
+  font-size: 1.5rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ═══════════════════
+   RECIPE DETAIL MODAL
+   ═══════════════════ */
+
+.recipe-detail-sheet {
+  padding: 0;
+  overflow: hidden;
+}
+
+.recipe-detail-sheet .modal-header {
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.rd-category {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rd-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.3;
+  padding: 1rem 1.25rem 0.5rem;
+  letter-spacing: -0.3px;
+}
+
+.rd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 1.25rem 1rem;
+}
+
+.rd-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--light);
+  padding: 0 1.25rem 0.5rem;
+}
+
+.rd-ingredients {
+  padding: 0 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.rd-ingredient {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 400;
+}
+
+.rd-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════
    MADPAKKER
    ═══════════════════ */
 

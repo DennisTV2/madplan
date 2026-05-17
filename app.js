@@ -324,6 +324,38 @@ function gatherSettings() {
   return { days, persons, shops, mealTypes, dietTags, pantry, budget, prefs, optimizeMode: selectedOpt, kids: kidsData };
 }
 
+// ─── SEASONAL & WEEKDAY HELPERS ──────────────────────────────────────────────
+
+function getSeasonalHint() {
+  const m = new Date().getMonth() + 1;
+  const map = {
+    1:  ['porre', 'rodfrugter', 'kål', 'persillerod', 'selleri'],
+    2:  ['porre', 'rodfrugter', 'kål', 'citrus', 'radicchio'],
+    3:  ['asparges', 'radiser', 'spinat', 'ærter'],
+    4:  ['asparges', 'radiser', 'spinat', 'ærter', 'nye kartofler'],
+    5:  ['asparges', 'jordbær', 'rabarbr', 'radiser', 'spinat', 'ærter'],
+    6:  ['jordbær', 'ærter', 'nye kartofler', 'courgette', 'salat', 'agurk'],
+    7:  ['tomater', 'courgette', 'bønner', 'agurk', 'salat', 'blåbær'],
+    8:  ['tomater', 'courgette', 'peberfrugt', 'bønner', 'blommer'],
+    9:  ['svampe', 'æbler', 'pærer', 'squash', 'porre', 'blomkål'],
+    10: ['svampe', 'æbler', 'rødbeder', 'kål', 'græskar', 'porre'],
+    11: ['rodfrugter', 'kål', 'rødkål', 'persillerod', 'selleri'],
+    12: ['rødkål', 'rodfrugter', 'appelsin', 'klementin', 'porre'],
+  };
+  const items = map[m] || [];
+  const season = m >= 3 && m <= 5 ? 'Forår' : m >= 6 && m <= 8 ? 'Sommer' : m >= 9 && m <= 11 ? 'Efterår' : 'Vinter';
+  return items.length ? `• SÆSON (${season} i Danmark): Prioritér gerne disse råvarer i min. 2 retter: ${items.join(', ')}` : '';
+}
+
+function getWeekdayHint(numDays) {
+  if (numDays < 5) return '';
+  return `• UGEDAGSRYTME — tilpas sværhedsgrad til dagen:
+  - Man–Tors: Enkle hverdagsretter (max 30–45 min tilberedning)
+  - Fredag: Hyggeret — pizza, tacos, burger eller noget der markerer weekend
+  - Lørdag: Mere tidskrævende eller festlig ret — steg, braiseret, noget særligt
+  - Søndag: Klassisk søndagsret — ovnstegt, steg, eller familiens favorit`;
+}
+
 // ─── GENERATE PLAN ────────────────────────────────────────────────────────────
 
 async function generatePlan() {
@@ -446,6 +478,8 @@ ${settings.pantry.length ? '• Basislager hjemme – KØB IKKE disse: ' + setti
 ${includeRules ? '• SKAL indgå i planen: ' + includeRules : ''}
 ${excludeRules ? '• MÅ ALDRIG bruges – allergi/fravalg: ' + excludeRules : ''}
 ${recentMeals.length ? '• UNDGÅ disse retter – brugt de seneste uger: ' + recentMeals.slice(0, 14).join(', ') : ''}
+${getSeasonalHint()}
+${getWeekdayHint(settings.days)}
 • VARIATIONSREGEL: Ingen ret gentages i denne plan. Brug max 1 pastabaseret ret og max 2 retter med samme protein. Varier køkken: dansk / italiensk / asiatisk / mexicansk / mellemøstligt.
 • BUTIKSBEGRÆNSNING: Brug KUN produkter og tilbud fra: ${selectedShopNames.join(', ')} – ignorer alle andre butikker i dine svar.
 ${settings.kids.enabled ? `
@@ -622,13 +656,12 @@ function renderPlan(plan) {
   let html = `
     <div class="plan-header">
       <div>
-        <div class="plan-title">🍽️ Din madplan</div>
+        <div class="plan-title">Din madplan</div>
         <div style="font-size:13px;color:var(--muted);margin-top:5px;max-width:560px">${plan.summary || ''}</div>
       </div>
       <div class="plan-actions">
         <button class="action-btn" onclick="window.print()">🖨️ Print</button>
-        <button class="action-btn" onclick="exportShoppingList(window.currentPlan)">📋 Eksportér liste</button>
-        <button class="action-btn primary" onclick="document.getElementById('plan-shopping').scrollIntoView({behavior:'smooth'})">🛒 Til indkøbsliste</button>
+        <button class="action-btn primary" onclick="showPage('indkob')">🛒 Indkøbsliste</button>
       </div>
     </div>`;
 
@@ -712,49 +745,20 @@ function renderPlan(plan) {
     html += '</div></div>'; // close day-card-body + day-card
   });
 
-  // Shopping list
+  // Shopping list CTA → Indkøb tab
+  const totalItems = (plan.shopping_list || []).reduce((s, st) => s + (st.items?.length || 0), 0);
+  const storeCount = (plan.shopping_list || []).length;
   html += `
-    <div class="shop-list" id="plan-shopping">
-      <div class="shop-list-header">
-        <div class="shop-list-title">🛒 Indkøbsliste</div>
-      </div>`;
-
-  (plan.shopping_list || []).forEach(store => {
-    const col = storeColors[store.store] || 'gray';
-    const total = (store.items || []).reduce((s, i) => s + (i.price || 0), 0);
-
-    html += `
-      <div class="shop-section">
-        <div class="shop-section-name">
-          ${store.store}
-          <span class="shop-section-badge badge badge-${col}">${(store.items || []).length} varer</span>
-          ${total ? `<span style="margin-left:auto;font-size:13px;font-weight:500;color:var(--accent)">~${total} kr</span>` : ''}
-        </div>`;
-
-    (store.items || []).forEach((item, i) => {
-      const id = 'cb_' + store.store.replace(/\s/g, '') + '_' + i;
-      const sale = item.on_sale ? ' <span class="badge badge-amber" style="font-size:10px;padding:1px 7px">Tilbud</span>' : '';
-      html += `
-        <div class="shop-item" id="row_${id}">
-          <div class="shop-cb" id="${id}" onclick="toggleItem('${id}')"></div>
-          <div class="shop-item-name">${item.name}${sale}</div>
-          <div class="shop-item-amount">${item.amount || ''}</div>
-          <div class="shop-item-price">${item.price ? item.price + ' kr' : ''}</div>
-        </div>`;
-    });
-
-    html += '</div>';
-  });
-
-  if (plan.total_price) {
-    html += `
-      <div class="total-bar">
-        <div class="total-label">Estimeret total indkøb</div>
-        <div class="total-amount">${plan.total_price} kr</div>
-      </div>`;
-  }
-
-  html += '</div>'; // .shop-list
+    <div class="shopping-cta" onclick="showPage('indkob')">
+      <div class="shopping-cta-left">
+        <div class="shopping-cta-icon">🛒</div>
+        <div>
+          <div class="shopping-cta-title">Indkøbsliste klar</div>
+          <div class="shopping-cta-sub">${totalItems} varer fordelt på ${storeCount} butik${storeCount !== 1 ? 'ker' : ''}${plan.total_price ? ' · ~' + plan.total_price + ' kr' : ''}</div>
+        </div>
+      </div>
+      <div class="shopping-cta-arrow">›</div>
+    </div>`;
 
   wrapper.innerHTML = html;
 }
@@ -1434,24 +1438,33 @@ async function fetchMealPhoto(mealName) {
 
 async function loadPlanPhotos() {
   if (!currentPlan?.plan) return;
-  for (const day of currentPlan.plan) {
+  const tasks = currentPlan.plan.map(day => {
     const dinner = (day.meals || []).find(m => m.type === 'Aftensmad');
-    if (!dinner) continue;
-    const slot = document.getElementById('photo-day-' + day.day);
-    if (!slot) continue;
-    const photo = await fetchMealPhoto(dinner.name);
-    if (photo?.url) {
+    if (!dinner) return Promise.resolve();
+    return fetchMealPhoto(dinner.name).then(photo => {
+      const slot = document.getElementById('photo-day-' + day.day);
+      if (!slot || !photo?.url) return;
       slot.innerHTML = `<img class="day-card-photo" src="${photo.url}" alt="${dinner.name}" loading="lazy">
         <div class="day-card-photo-credit"><a href="${photo.link}" target="_blank" rel="noopener noreferrer">${photo.credit}</a></div>`;
-    }
-  }
+    });
+  });
+  await Promise.all(tasks);
 }
 
 // ─── RECIPE CATALOG ───────────────────────────────────────────────────────────
 
 let activeRecipeCategory = null;
+let recipeSearchQuery = '';
 
 function renderRecipeCatalog() {
+  const searchInput = document.getElementById('recipe-search');
+  if (searchInput && !searchInput._bound) {
+    searchInput._bound = true;
+    searchInput.addEventListener('input', e => {
+      recipeSearchQuery = e.target.value.trim().toLowerCase();
+      renderRecipeGrid();
+    });
+  }
   renderRecipeCategoryFilter();
   renderRecipeGrid();
 }
@@ -1470,14 +1483,30 @@ function renderRecipeCategoryFilter() {
 function renderRecipeGrid() {
   const container = document.getElementById('recipes-grid');
   if (!container) return;
-  const filtered = activeRecipeCategory ? RECIPES.filter(r => r.category === activeRecipeCategory) : RECIPES;
+  let filtered = activeRecipeCategory ? RECIPES.filter(r => r.category === activeRecipeCategory) : RECIPES;
+  if (recipeSearchQuery) {
+    filtered = filtered.filter(r =>
+      r.name.toLowerCase().includes(recipeSearchQuery) ||
+      r.tags.some(t => t.toLowerCase().includes(recipeSearchQuery)) ||
+      (r.ingredients || []).some(i => i.toLowerCase().includes(recipeSearchQuery))
+    );
+  }
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state" style="padding:2.5rem 0">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-text">Ingen resultater for "${recipeSearchQuery}"</div>
+      <div class="empty-sub">Prøv et andet ord — f.eks. en ingrediens eller kategori</div>
+    </div>`;
+    return;
+  }
   container.innerHTML = `<div class="recipe-grid">${filtered.map(r => `
-    <div class="recipe-card">
+    <div class="recipe-card" onclick="showRecipeDetail('${r.id}')">
       <div class="recipe-card-photo-placeholder">${getCategoryEmoji(r.category)}</div>
       <div class="recipe-card-body">
         <div class="recipe-card-name">${r.name}</div>
         <div class="recipe-card-tags">${r.tags.slice(0, 2).map(t => `<span class="cat-chip">${t}</span>`).join('')}</div>
       </div>
+      <div class="recipe-card-arrow">›</div>
     </div>`).join('')}</div>`;
 }
 
@@ -1485,6 +1514,25 @@ function filterRecipes(category) {
   activeRecipeCategory = category;
   renderRecipeCategoryFilter();
   renderRecipeGrid();
+}
+
+function showRecipeDetail(recipeId) {
+  const r = RECIPES.find(rec => rec.id === recipeId);
+  if (!r) return;
+  document.getElementById('rd-name').textContent = r.name;
+  document.getElementById('rd-category').innerHTML =
+    `${getCategoryEmoji(r.category)} <span>${catDanish(r.category)}</span>`;
+  document.getElementById('rd-tags').innerHTML =
+    r.tags.map(t => `<span class="cat-chip">${t}</span>`).join('');
+  document.getElementById('rd-ingredients').innerHTML =
+    (r.ingredients || []).map(i =>
+      `<div class="rd-ingredient"><span class="rd-dot"></span>${i}</div>`
+    ).join('');
+  document.getElementById('recipe-detail-modal').style.display = 'flex';
+}
+
+function closeRecipeDetail() {
+  document.getElementById('recipe-detail-modal').style.display = 'none';
 }
 
 function catDanish(cat) {
