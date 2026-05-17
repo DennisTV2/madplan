@@ -1226,3 +1226,171 @@ select {
   .auth-card { padding: 2rem 1.25rem; }
   .kids-options { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════
+   SWAP BUTTON
+   ═══════════════════ */
+
+.swap-btn {
+  padding: 4px 10px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-xs);
+  background: var(--bg);
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.swap-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+/* ═══════════════════
+   MODAL
+   ═══════════════════ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: var(--card);
+  border-radius: var(--r-lg);
+  width: 100%;
+  max-width: 560px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  border: 0.5px solid var(--border);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 0.5px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--card);
+  z-index: 1;
+  gap: 1rem;
+}
+
+.modal-title { font-family: var(--font-head); font-size: 1.15rem; font-weight: 500; }
+.modal-context { font-size: 12px; color: var(--muted); font-weight: 300; margin-top: 2px; }
+
+.modal-close {
+  width: 32px; height: 32px;
+  border: none;
+  background: var(--stone-100);
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.modal-close:hover { background: var(--berry-100); color: var(--berry-600); }
+.modal-body { padding: 1.25rem 1.5rem; }
+
+.alt-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-warm);
+}
+
+.alt-card:last-child { margin-bottom: 0; }
+
+.alt-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.alt-card-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.alt-card-desc { font-size: 13px; color: var(--muted); font-weight: 300; line-height: 1.4; }
+.alt-card-meta { display: flex; gap: 7px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.alt-card-price { font-family: var(--font-head); font-size: 14px; font-weight: 500; color: var(--accent); }
+
+.badge-veg { background: #E8F5E9; color: #2E7D32; }
+
+/* ═══════════════════
+   OFFER CHIPS — alle butikker
+   ═══════════════════ */
+
+.offer-chip.disc  { border-color: #1976D2; color: #0d3c7a; background: #E3F2FD; }
+.offer-chip.spar  { border-color: #E65100; color: #7a2900; background: #FFF3E0; }
+.offer-chip.meny  { border-color: #424242; color: #111; background: #F5F5F5; }
+.offer-chip.aldi  { border-color: #1565C0; color: #0a2a5e; background: #E8EAF6; }
+.offer-chip.coop  { border-color: #2E7D32; color: #1b4d1e; background: #E8F5E9; }
+
+/* ═══════════════════
+   MADPAKKER
+   ═══════════════════ */
+
+.lunch-day-card {
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.lunch-box {
+  margin-top: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-warm);
+  border-radius: var(--r);
+  border: 0.5px solid var(--border);
+}
+
+.lunch-box + .lunch-box { margin-top: 0.5rem; }
+
+.lunch-box-type {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  margin-bottom: 0.6rem;
+}
+
+.lunch-items { list-style: none; }
+
+.lunch-item {
+  font-size: 13px;
+  color: var(--text);
+  padding: 2px 0;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  line-height: 1.4;
+}
+
+.lunch-item::before { content: '·'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.lunch-price { font-family: var(--font-head); font-size: 13px; color: var(--accent); margin-top: 8px; font-weight: 500; }
+.lunch-tip { font-size: 12px; color: var(--teal-600, #2d5870); margin-top: 6px; font-style: italic; font-weight: 300; }

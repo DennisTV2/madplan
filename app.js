@@ -13,10 +13,102 @@ let currentPlan = null;
 let kidsEnabled = false;
 let kidsAge = '6-9';
 let kidsOptions = new Set(['vask-skær', 'røre-blande']);
+let swapContext = null;
+let swapAlts = null;
+let lunchDays = 5;
+let lunchPersons = 2;
 
 // Load from localStorage
 let users   = JSON.parse(localStorage.getItem('mp_users') || '[]');
 let history = JSON.parse(localStorage.getItem('mp_history') || '[]');
+
+// ─── STORE OFFERS DATA ────────────────────────────────────────────────────────
+
+const STORE_OFFERS = {
+  netto: {
+    name: 'Netto', color: 'netto',
+    chips: ['Kylling 29kr/kg', 'Pasta 8kr', 'Hakkede tomater 7kr', 'Gulerødder 6kr/kg'],
+    items: [
+      'Kyllingefilet: 29 kr/kg ★',
+      'Spaghetti/pasta 500g: 8 kr ★',
+      'Hakkede tomater dåse: 7 kr ★',
+      'Cherry-tomater 2 bakker: 25 kr ★',
+      'Gulerødder 1kg: 6 kr ★',
+      'Mælk 1L: 7 kr ★',
+    ],
+  },
+  rema: {
+    name: 'Rema 1000', color: 'rema',
+    chips: ['Laks 49kr/400g', 'Havregryn 12kr', 'Æg 10stk 20kr', 'Ris 12kr/kg'],
+    items: [
+      'Atlanterhavslaks 400g: 49 kr ★',
+      'Havregryn 1kg: 12 kr ★',
+      'Æg 10 stk: 20 kr ★',
+      'Jasminris 1kg: 12 kr ★',
+      'Broccoli: 12 kr ★',
+      'Hakket oksekød 8% fedt 500g: 39 kr ★',
+      'Kokosmælk 400ml: 14 kr ★',
+    ],
+  },
+  lidl: {
+    name: 'Lidl', color: 'lidl',
+    chips: ['Svinekam 35kr/kg', 'Broccoli 9kr', 'Spinat 12kr', 'Pasta 7kr'],
+    items: [
+      'Svinekam 1kg: 35 kr ★',
+      'Broccoli: 9 kr ★',
+      'Frisk spinat 200g: 12 kr ★',
+      'Mozzarella 125g: 15 kr ★',
+      'Penne pasta 500g: 7 kr ★',
+      'Æbler 1kg: 18 kr ★',
+    ],
+  },
+  '365': {
+    name: '365discount', color: 'disc',
+    chips: ['Tun 8kr', 'Bønner 9kr', 'Pasta 7kr'],
+    items: [
+      'Tun i vand 185g: 8 kr ★',
+      'Kidneybønner 400g: 9 kr ★',
+      'Pasta 500g: 7 kr ★',
+    ],
+  },
+  fakta: {
+    name: 'Spar', color: 'spar',
+    chips: ['Hel kylling 55kr', 'Kartofler 9kr/kg', 'Porre 8kr'],
+    items: [
+      'Hel kylling 1.2kg: 55 kr ★',
+      'Kartofler 1kg: 9 kr ★',
+      'Porre: 8 kr ★',
+    ],
+  },
+  meny: {
+    name: 'Meny', color: 'meny',
+    chips: ['Torsk 65kr/400g', 'Krydderurter 18kr'],
+    items: [
+      'Frisk torsk 400g: 65 kr ★',
+      'Friske krydderurter: 18 kr ★',
+    ],
+  },
+  aldi: {
+    name: 'Aldi', color: 'aldi',
+    chips: ['Hakket svin 30kr/500g', 'Æbler 15kr/kg', 'Smør 18kr'],
+    items: [
+      'Hakket svinekød 500g: 30 kr ★',
+      'Æbler 1kg: 15 kr ★',
+      'Smør 250g: 18 kr ★',
+      'Mælk 1L: 7 kr ★',
+    ],
+  },
+  coop: {
+    name: 'Coop', color: 'coop',
+    chips: ['Kyllingelår 35kr/kg', 'Kartofler 2kg/15kr', 'Yoghurt 16kr'],
+    items: [
+      'Kyllingelår 1kg: 35 kr ★',
+      'Hakket oksekød 400g: 42 kr ★',
+      'Kartofler 2kg: 15 kr ★',
+      'Yoghurt naturel 500g: 16 kr ★',
+    ],
+  },
+};
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 
@@ -82,6 +174,7 @@ function enterApp() {
 
   loadHistory();
   updateStats();
+  renderOffersRow();
   showPage('plan');
 }
 
@@ -102,7 +195,7 @@ function showPage(page) {
 
   document.getElementById('page-' + page).classList.add('active');
 
-  const navMap = { plan: 0, result: 1, history: 2, profile: 3 };
+  const navMap = { plan: 0, result: 1, history: 2, madpakker: 3, profile: 4 };
   const navItems = document.querySelectorAll('.nav-item');
   if (navMap[page] !== undefined) navItems[navMap[page]].classList.add('active');
 
@@ -124,6 +217,7 @@ function adjustPersons(d) {
 
 function toggleShop(el) {
   el.classList.toggle('selected');
+  renderOffersRow();
 }
 
 function selectOpt(opt) {
@@ -257,8 +351,9 @@ async function generatePlan() {
   }, 1800);
 
   // Build prompt
-  const shopNames = { netto: 'Netto', rema: 'Rema 1000', lidl: 'Lidl', '365': '365discount', fakta: 'Spar', meny: 'Meny', aldi: 'Aldi', coop: 'Coop' };
-  const selectedShopNames = settings.shops.map(s => shopNames[s] || s);
+  const selectedShopNames = settings.shops.map(s => STORE_OFFERS[s]?.name || s);
+  const recentMeals = getRecentMealNames();
+  const catalogHint = getDishCatalogSuggestions(settings.shops);
 
   const includeRules = settings.prefs.filter(p => p.type === 'include')
     .map(p => `${p.ingredient}${p.count ? ' (mindst ' + p.count + ' retter i ugen)' : ''}`).join(', ');
@@ -337,6 +432,9 @@ ${settings.dietTags.length ? '• Kostpræferencer (OBLIGATORISK overhold): ' + 
 ${settings.pantry.length ? '• Basislager hjemme – KØB IKKE disse: ' + settings.pantry.join(', ') : ''}
 ${includeRules ? '• SKAL indgå i planen: ' + includeRules : ''}
 ${excludeRules ? '• MÅ ALDRIG bruges – allergi/fravalg: ' + excludeRules : ''}
+${recentMeals.length ? '• UNDGÅ disse retter – brugt de seneste uger: ' + recentMeals.slice(0, 14).join(', ') : ''}
+• VARIATIONSREGEL: Ingen ret gentages i denne plan. Brug max 1 pastabaseret ret og max 2 retter med samme protein. Varier køkken: dansk / italiensk / asiatisk / mexicansk / mellemøstligt.
+• BUTIKSBEGRÆNSNING: Brug KUN produkter og tilbud fra: ${selectedShopNames.join(', ')} – ignorer alle andre butikker i dine svar.
 ${settings.kids.enabled ? `
 ════════════════════════════════════
 LAV MAD MED BØRN — OBLIGATORISKE TRIN
@@ -358,48 +456,11 @@ Eksempel for alder ${settings.kids.age} år:
 
 Vælg aktiviteter der passer til alderen – for 3-5 år: enkle og sikre opgaver uden varme; for 14+: selvstændige trin.` : ''}
 
+${catalogHint}════════════════════════════════════
+TILBUDSAVISER — KUN DISSE BUTIKKER: ${selectedShopNames.join(', ')}
 ════════════════════════════════════
-TILBUDSAVISER DENNE UGE
-════════════════════════════════════
 
-Netto tilbud:
-- Kyllingefilet: 29 kr/kg ★
-- Spaghetti/pasta 500g: 8 kr ★
-- Hakkede tomater dåse: 7 kr ★
-- Cherry-tomater 2 bakker: 25 kr ★
-- Gulerødder 1kg: 6 kr ★
-- Mælk 1L: 7 kr ★
-
-Rema 1000 tilbud:
-- Atlanterhavslaks 400g: 49 kr ★
-- Havregryn 1kg: 12 kr ★
-- Æg 10 stk: 20 kr ★
-- Jasminris 1kg: 12 kr ★
-- Broccoli: 12 kr ★
-- Hakket oksekød 8% fedt 500g: 39 kr ★
-- Kokosmælk 400ml: 14 kr ★
-
-Lidl tilbud:
-- Svinekam 1kg: 35 kr ★
-- Broccoli: 9 kr ★
-- Frisk spinat 200g: 12 kr ★
-- Mozzarella 125g: 15 kr ★
-- Penne pasta 500g: 7 kr ★
-- Æbler 1kg: 18 kr ★
-
-365discount tilbud:
-- Tun i vand 185g: 8 kr ★
-- Kidneybønner 400g: 9 kr ★
-- Pasta 500g: 7 kr ★
-
-Spar tilbud:
-- Hel kylling 1.2kg: 55 kr ★
-- Kartofler 1kg: 9 kr ★
-- Porre: 8 kr ★
-
-Meny tilbud:
-- Frisk torsk 400g: 65 kr ★
-- Friske krydderurter: 18 kr ★
+${getFilteredOffersText(settings.shops)}
 
 Normalpriser (ikke på tilbud):
 - Løg: 5 kr/stk, Hvidløg: 8 kr/hoved
@@ -572,13 +633,13 @@ function renderPlan(plan) {
   }
 
   // Day cards
-  (plan.plan || []).forEach(day => {
+  (plan.plan || []).forEach((day, dayIdx) => {
     html += `
       <div class="day-card">
         <div class="day-label">Dag ${day.day}</div>
         <div class="day-date">${day.label || 'Dag ' + day.day}</div>`;
 
-    (day.meals || []).forEach(meal => {
+    (day.meals || []).forEach((meal, mealIdx) => {
       const saleTag = meal.on_sale
         ? '<span class="badge badge-amber">🏷️ Tilbud</span>'
         : '';
@@ -605,6 +666,7 @@ function renderPlan(plan) {
             ${kidsHtml}
           </div>
           <div class="meal-price">${meal.price_per_person ? meal.price_per_person + ' kr/p' : ''}</div>
+          <button class="swap-btn" onclick="swapMeal(${dayIdx},${mealIdx})">🔄 Udskift</button>
         </div>`;
     });
 
@@ -717,6 +779,7 @@ function savePlanToHistory(plan, settings) {
   history.unshift(entry);
   if (history.length > 50) history = history.slice(0, 50);
   localStorage.setItem('mp_history', JSON.stringify(history));
+  updateDishCatalog(plan);
 }
 
 function loadHistory() {
@@ -787,6 +850,365 @@ function updateStats() {
   document.getElementById('stat-plans').textContent = userHistory.length;
   document.getElementById('stat-meals').textContent = totalMeals;
   document.getElementById('stat-saved').textContent = totalSaved ? totalSaved + ' kr' : '—';
+}
+
+// ─── OFFERS ROW ──────────────────────────────────────────────────────────────
+
+function renderOffersRow() {
+  const container = document.getElementById('offers-row');
+  if (!container) return;
+  const selected = [...document.querySelectorAll('.shop-card.selected')].map(s => s.dataset.shop);
+  const chips = selected.flatMap(id => {
+    const store = STORE_OFFERS[id];
+    if (!store) return [];
+    return store.chips.map(c => `<span class="offer-chip ${store.color}">${store.name}: ${c}</span>`);
+  });
+  container.innerHTML = chips.length
+    ? chips.join('')
+    : '<span style="font-size:13px;color:var(--faint)">Vælg butikker for at se aktuelle tilbud</span>';
+}
+
+function getFilteredOffersText(shops) {
+  if (!shops.length) return 'Ingen butikker valgt.';
+  return shops.map(id => {
+    const s = STORE_OFFERS[id];
+    if (!s) return '';
+    return `${s.name} tilbud:\n${s.items.map(i => '- ' + i).join('\n')}`;
+  }).filter(Boolean).join('\n\n');
+}
+
+// ─── VARIATION — RECENT MEALS ─────────────────────────────────────────────────
+
+function getRecentMealNames() {
+  if (!currentUser) return [];
+  const names = new Set();
+  history
+    .filter(h => h.user === currentUser.email)
+    .slice(0, 3)
+    .forEach(entry => {
+      (entry.plan?.plan || []).forEach(day => {
+        (day.meals || []).forEach(meal => { if (meal.name) names.add(meal.name); });
+      });
+    });
+  return [...names];
+}
+
+// ─── DISH CATALOG (feature 4) ─────────────────────────────────────────────────
+
+function updateDishCatalog(plan) {
+  let catalog = JSON.parse(localStorage.getItem('mp_dish_catalog') || '[]');
+  const now = Date.now();
+  (plan.plan || []).forEach(day => {
+    (day.meals || []).forEach(meal => {
+      if (!meal.name) return;
+      const idx = catalog.findIndex(c => c.name.toLowerCase() === meal.name.toLowerCase());
+      if (idx >= 0) {
+        catalog[idx].useCount++;
+        catalog[idx].lastUsed = now;
+        if (meal.store) catalog[idx].store = meal.store;
+      } else {
+        catalog.push({
+          name: meal.name,
+          description: meal.description || '',
+          store: meal.store || '',
+          tags: meal.tags || [],
+          useCount: 1,
+          lastUsed: now,
+        });
+      }
+    });
+  });
+  catalog.sort((a, b) => b.useCount - a.useCount || b.lastUsed - a.lastUsed);
+  localStorage.setItem('mp_dish_catalog', JSON.stringify(catalog.slice(0, 150)));
+}
+
+function getDishCatalogSuggestions(shops) {
+  const catalog = JSON.parse(localStorage.getItem('mp_dish_catalog') || '[]');
+  if (!catalog.length) return '';
+  const keywords = shops.flatMap(id =>
+    (STORE_OFFERS[id]?.items || []).map(i => i.split(':')[0].split(' ')[0].toLowerCase())
+  ).filter(kw => kw.length > 3);
+
+  const matches = catalog.filter(d => {
+    const text = (d.name + ' ' + d.description).toLowerCase();
+    return keywords.some(kw => text.includes(kw));
+  }).slice(0, 4);
+
+  if (!matches.length) return '';
+  return `════════════════════════════════════
+DIT KARTOTEK — TIDLIGERE RETTER DER MATCHER AKTUELLE TILBUD
+════════════════════════════════════
+
+Disse retter fra din historik bruger råvarer der er på tilbud nu. Overvej at inkludere én:
+${matches.map(m => `• ${m.name}${m.useCount > 1 ? ' (brugt ' + m.useCount + 'x)' : ''}: ${m.description}`).join('\n')}
+
+`;
+}
+
+// ─── MEAL SWAP (feature 3 + 6) ────────────────────────────────────────────────
+
+async function swapMeal(dayIdx, mealIdx) {
+  if (!currentPlan) return;
+  const day  = currentPlan.plan[dayIdx];
+  const meal = day.meals[mealIdx];
+  swapContext = { dayIdx, mealIdx };
+
+  document.getElementById('swap-modal').style.display = 'flex';
+  document.getElementById('swap-loading').style.display = 'block';
+  document.getElementById('swap-alts').style.display   = 'none';
+  document.getElementById('swap-context').textContent   = `${day.label}: ${meal.type} — ${meal.name}`;
+
+  const settings    = gatherSettings();
+  const shopNames   = settings.shops.map(id => STORE_OFFERS[id]?.name || id).join(', ');
+  const offersText  = getFilteredOffersText(settings.shops);
+  const dietStr     = settings.dietTags.length ? settings.dietTags.join(', ') : 'ingen';
+  const budgetNote  = meal.price_per_person ? `ca. ${meal.price_per_person} kr/person` : 'tilpas budgettet';
+
+  const prompt = `Du er madplanekspert. Ret der skal udskiftes: "${meal.name}" (${meal.type}, ${day.label}).
+
+Krav til de 3 alternativer:
+• Brug KUN produkter fra: ${shopNames}
+• Budgetniveau: ${budgetNote}
+• Kostpræferencer: ${dietStr}
+• MINDST ÉT forslag SKAL være vegetarisk (mærk med "vegetarian": true)
+• Alle retter skal være kulinarisk korrekte og komplette (protein + tilbehør + sauce)
+• Brug aktuelle tilbud når muligt
+• Alternativerne skal være FORSKELLIGE fra hinanden og fra originalretten
+
+Aktuelle tilbud (kun valgte butikker):
+${offersText}
+
+Svar KUN med ét validt JSON-objekt. Ingen markdown, ingen forklaringer.
+
+{
+  "alternatives": [
+    {
+      "name": "Ret navn",
+      "description": "Ret og tilbehør der hænger kulinarisk korrekt sammen",
+      "store": "Butiksnavn",
+      "price_per_person": 35,
+      "tags": ["Tag"],
+      "on_sale": false,
+      "vegetarian": false
+    }
+  ]
+}`;
+
+  try {
+    const res  = await fetch('proxy.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+    });
+    if (!res.ok) throw new Error('API-fejl: ' + res.status);
+    const data = await res.json();
+    let text   = (data.content || []).map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
+    const m    = text.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(m ? m[0] : text);
+    renderAlternatives(parsed.alternatives || []);
+  } catch (e) {
+    document.getElementById('swap-loading').innerHTML =
+      `<div style="text-align:center;padding:1rem"><div style="font-size:2rem;margin-bottom:8px">⚠️</div><div style="color:var(--berry-600);font-size:14px">${e.message}</div><button onclick="closeSwapModal()" style="margin-top:1rem;padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);cursor:pointer;font-family:var(--font-body)">Luk</button></div>`;
+  }
+}
+
+function renderAlternatives(alts) {
+  document.getElementById('swap-loading').style.display = 'none';
+  swapAlts = alts;
+  const container = document.getElementById('swap-alts');
+  container.style.display = 'block';
+  container.innerHTML = alts.map((alt, i) => `
+    <div class="alt-card" onclick="applyAlternative(${i})">
+      <div class="alt-card-name">${alt.name}</div>
+      <div class="alt-card-desc">${alt.description || ''}</div>
+      <div class="alt-card-meta">
+        ${alt.price_per_person ? `<span class="alt-card-price">${alt.price_per_person} kr/p</span>` : ''}
+        ${alt.on_sale      ? '<span class="badge badge-amber">🏷️ Tilbud</span>' : ''}
+        ${alt.vegetarian   ? '<span class="badge badge-veg">🥬 Vegetarisk</span>' : ''}
+        ${alt.store        ? `<span class="badge badge-gray">${alt.store}</span>` : ''}
+        ${(alt.tags || []).map(t => `<span class="badge badge-green">${t}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function applyAlternative(altIdx) {
+  if (!swapContext || !swapAlts) return;
+  const { dayIdx, mealIdx } = swapContext;
+  const mealType = currentPlan.plan[dayIdx].meals[mealIdx].type;
+  currentPlan.plan[dayIdx].meals[mealIdx] = { ...swapAlts[altIdx], type: mealType };
+  closeSwapModal();
+  renderPlan(currentPlan);
+}
+
+function closeSwapModal() {
+  document.getElementById('swap-modal').style.display = 'none';
+  swapContext = null;
+  swapAlts    = null;
+  document.getElementById('swap-loading').innerHTML = `
+    <div class="spinner"></div>
+    <div class="loading-text">Finder alternativer...</div>
+    <div class="loading-sub">Henter 3 forslag der passer til dit budget og dine butikker</div>`;
+}
+
+// ─── MADPAKKER (feature 5) ────────────────────────────────────────────────────
+
+function adjustLunchDays(d) {
+  lunchDays = Math.max(1, Math.min(7, lunchDays + d));
+  document.getElementById('lunch-days-val').textContent = lunchDays;
+}
+
+function adjustLunchPersons(d) {
+  lunchPersons = Math.max(1, Math.min(20, lunchPersons + d));
+  document.getElementById('lunch-persons-val').textContent = lunchPersons;
+}
+
+async function generateLunchPlan() {
+  const settings = gatherSettings();
+  if (!settings.shops.length) { alert('Vælg mindst én butik på Ny madplan-siden'); return; }
+
+  const genBtn  = document.getElementById('lunch-gen-btn');
+  const loading = document.getElementById('lunch-loading');
+  const empty   = document.getElementById('lunch-empty');
+  const output  = document.getElementById('lunch-output');
+
+  empty.style.display   = 'none';
+  loading.style.display = 'block';
+  output.style.display  = 'none';
+  genBtn.disabled       = true;
+
+  const shopNames  = settings.shops.map(id => STORE_OFFERS[id]?.name || id);
+  const offersText = getFilteredOffersText(settings.shops);
+  const dietStr    = settings.dietTags.length ? settings.dietTags.join(', ') : '';
+  const budgetVal  = document.getElementById('lunch-budget').value;
+  const hasKids    = document.getElementById('lunch-has-kids').checked;
+  const hasAdults  = document.getElementById('lunch-has-adults').checked;
+  const dayNames   = ['Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag','Søndag'];
+  const boxTypes   = [...(hasKids ? ['Børnemadpakke'] : []), ...(hasAdults ? ['Voksenmadpakke'] : [])];
+  if (!boxTypes.length) boxTypes.push('Madpakke');
+
+  const prompt = `Du er Danmarks bedste madpakkeekspert. Lav varierede, sunde og budgetvenlige madpakker til hele ugen.
+
+PARAMETRE:
+• Antal dage: ${lunchDays} (${dayNames.slice(0, lunchDays).join(', ')})
+• Antal personer: ${lunchPersons}
+• Madpakketyper: ${boxTypes.join(' + ')}
+• Brug KUN produkter fra: ${shopNames.join(', ')}
+${dietStr ? '• Kostpræferencer: ' + dietStr : ''}
+${budgetVal ? '• Max budget: ' + budgetVal + ' kr for alle madpakker i ugen' : ''}
+
+FOKUS:
+• Brug rugbrød eller franskbrød som base – variér mellem dem
+• Pålæg: leverpostej, makrel, ost, skinke, tun, æg, hummus – variér dagligt
+• Grøntsager: gulerødder, agurk, tomat, radiser, peberfrugt
+• Frugt: æble, pære, banan, appelsin (sæsonbaseret)
+• Snacks: yoghurt, kærnemælk, nødder, kiks, müslibar
+• Wraps eller sandwich som variation 2 gange ugen
+• Drikkevarer: vand, mælk, 100% juice
+${hasKids ? '• Børnemadpakker: enkle, farverige og lette at spise. Ingen stærkt krydret mad.' : ''}
+• Variationsregel: Ikke samme pålæg to dage i træk
+
+AKTUELLE TILBUD (brug disse prioriteret):
+${offersText}
+
+OUTPUT – KUN JSON, INTET ANDET:
+
+{
+  "lunchplan": [
+    {
+      "day": 1,
+      "label": "Mandag",
+      "boxes": [
+        {
+          "label": "Børnemadpakke",
+          "items": ["2 stk rugbrød med smør og leverpostej og agurk", "Gulerodsstave", "Æble", "Yoplait frugt"],
+          "store": "Netto",
+          "price": 22,
+          "tip": "Pak det i en sjov boks"
+        }
+      ]
+    }
+  ],
+  "shopping_list": [
+    {
+      "store": "Netto",
+      "items": [
+        {"name": "Rugbrød 500g", "amount": "2 pakker", "price": 50, "on_sale": false}
+      ]
+    }
+  ],
+  "total_price": 380,
+  "savings": 55,
+  "summary": "En varieret uges madpakker..."
+}`;
+
+  try {
+    const res  = await fetch('proxy.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 6000, messages: [{ role: 'user', content: prompt }] }),
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || 'API-fejl: ' + res.status); }
+    const data = await res.json();
+    let text   = (data.content || []).map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
+    const m    = text.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(m ? m[0] : text);
+    loading.style.display = 'none';
+    renderLunchPlan(parsed);
+  } catch (e) {
+    loading.style.display = 'none';
+    empty.style.display   = 'block';
+    empty.innerHTML = `<div class="empty-icon">⚠️</div><div class="empty-text">Noget gik galt</div><div class="empty-sub" style="color:var(--berry-600)">${e.message}</div>`;
+  } finally {
+    genBtn.disabled = false;
+  }
+}
+
+function renderLunchPlan(plan) {
+  const container = document.getElementById('lunch-output');
+  container.style.display = 'block';
+  const storeColors = { 'Netto': 'amber', 'Rema 1000': 'coral', 'Lidl': 'teal', '365discount': 'green' };
+
+  let html = '';
+
+  if (plan.total_price || plan.savings) {
+    html += `<div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">`;
+    if (plan.total_price) html += `<div class="total-bar" style="flex:1;min-width:140px"><div class="total-label">Estimeret total</div><div class="total-amount">${plan.total_price} kr</div></div>`;
+    if (plan.savings)     html += `<div class="total-bar" style="flex:1;min-width:140px;background:var(--fjord-50);border-color:var(--fjord-100)"><div class="total-label" style="color:var(--fjord-800)">Estimeret besparelse</div><div class="total-amount" style="color:var(--fjord-800)">${plan.savings} kr</div></div>`;
+    html += '</div>';
+  }
+
+  if (plan.summary) html += `<div style="font-size:13px;color:var(--muted);margin-bottom:1.5rem;line-height:1.5">${plan.summary}</div>`;
+
+  (plan.lunchplan || []).forEach(day => {
+    html += `<div class="lunch-day-card"><div class="day-label">Dag ${day.day}</div><div class="day-date">${day.label}</div>`;
+    (day.boxes || []).forEach(box => {
+      html += `<div class="lunch-box">
+        <div class="lunch-box-type">${box.label}${box.store ? ' · ' + box.store : ''}</div>
+        <ul class="lunch-items">${(box.items || []).map(i => `<li class="lunch-item">${i}</li>`).join('')}</ul>
+        ${box.price ? `<div class="lunch-price">${box.price} kr</div>` : ''}
+        ${box.tip   ? `<div class="lunch-tip">💡 ${box.tip}</div>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  if ((plan.shopping_list || []).length) {
+    html += `<div class="shop-list"><div class="shop-list-header"><div class="shop-list-title">🛒 Indkøbsliste</div></div>`;
+    (plan.shopping_list || []).forEach(store => {
+      const col   = storeColors[store.store] || 'gray';
+      const total = (store.items || []).reduce((s, i) => s + (i.price || 0), 0);
+      html += `<div class="shop-section"><div class="shop-section-name">${store.store} <span class="shop-section-badge badge badge-${col}">${(store.items||[]).length} varer</span>${total ? `<span style="margin-left:auto;font-size:13px;color:var(--accent)">${total} kr</span>` : ''}</div>`;
+      (store.items || []).forEach((item, i) => {
+        const id = 'lc_' + store.store.replace(/\s/g,'') + '_' + i;
+        html += `<div class="shop-item" id="row_${id}"><div class="shop-cb" id="${id}" onclick="toggleItem('${id}')"></div><div class="shop-item-name">${item.name}${item.on_sale ? ' <span class="badge badge-amber" style="font-size:10px">Tilbud</span>' : ''}</div><div class="shop-item-amount">${item.amount||''}</div><div class="shop-item-price">${item.price ? item.price + ' kr' : ''}</div></div>`;
+      });
+      html += '</div>';
+    });
+    if (plan.total_price) html += `<div class="total-bar"><div class="total-label">Estimeret total</div><div class="total-amount">${plan.total_price} kr</div></div>`;
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
 }
 
 // ─── KEYBOARD SHORTCUTS ──────────────────────────────────────────────────────
