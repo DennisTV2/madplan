@@ -17,6 +17,7 @@ let swapContext = null;
 let swapAlts = null;
 let lunchDays = 5;
 let lunchPersons = 2;
+let realOffers = null; // Sættes af fetchRealOffers() — null = brug fallback
 
 // Load from localStorage
 let users   = JSON.parse(localStorage.getItem('mp_users') || '[]');
@@ -354,6 +355,11 @@ async function generatePlan() {
   const selectedShopNames = settings.shops.map(s => STORE_OFFERS[s]?.name || s);
   const recentMeals = getRecentMealNames();
   const catalogHint = getDishCatalogSuggestions(settings.shops);
+
+  // Hent rigtige tilbud (med 30-min cache — falder tilbage til statiske data ved fejl)
+  document.getElementById('loading-msg').textContent = 'Henter aktuelle tilbud...';
+  realOffers = await fetchRealOffers(settings.shops);
+  renderOffersRow();
 
   const includeRules = settings.prefs.filter(p => p.type === 'include')
     .map(p => `${p.ingredient}${p.count ? ' (mindst ' + p.count + ' retter i ugen)' : ''}`).join(', ');
@@ -858,6 +864,22 @@ function renderOffersRow() {
   const container = document.getElementById('offers-row');
   if (!container) return;
   const selected = [...document.querySelectorAll('.shop-card.selected')].map(s => s.dataset.shop);
+
+  if (realOffers?.grouped) {
+    const chips = selected.flatMap(id => {
+      const store = STORE_OFFERS[id];
+      return (realOffers.grouped[id] || []).slice(0, 5).map(o => {
+        const price = o.price !== null ? ` ${o.price} kr${o.quantity ? '/' + o.quantity : ''}` : '';
+        return `<span class="offer-chip ${store?.color || 'gray'}">${store?.name || id}: ${o.heading}${price}</span>`;
+      });
+    });
+    container.innerHTML = chips.length
+      ? chips.join('')
+      : '<span style="font-size:13px;color:var(--faint);font-style:italic">Ingen aktuelle tilbud fundet — bruger standarddata</span>';
+    return;
+  }
+
+  // Fallback: statiske data
   const chips = selected.flatMap(id => {
     const store = STORE_OFFERS[id];
     if (!store) return [];
@@ -869,12 +891,56 @@ function renderOffersRow() {
 }
 
 function getFilteredOffersText(shops) {
+  if (realOffers?.grouped) {
+    const lines = shops.map(id => {
+      const store = STORE_OFFERS[id];
+      const items = (realOffers.grouped[id] || []).slice(0, 15);
+      if (!items.length) return '';
+      const header = `${store?.name || id} tilbud (aktuelle — hentet live):`;
+      const body = items.map(o => {
+        const price = o.price !== null ? `: ${o.price} kr${o.quantity ? '/' + o.quantity : ''}` : '';
+        return `- ${o.heading}${price} ★`;
+      }).join('\n');
+      return header + '\n' + body;
+    }).filter(Boolean);
+    return lines.length ? lines.join('\n\n') : 'Ingen tilbud tilgængelige for valgte butikker.';
+  }
+  // Fallback: statiske simulerede data
   if (!shops.length) return 'Ingen butikker valgt.';
   return shops.map(id => {
     const s = STORE_OFFERS[id];
     if (!s) return '';
-    return `${s.name} tilbud:\n${s.items.map(i => '- ' + i).join('\n')}`;
+    return `${s.name} tilbud (simulerede):\n${s.items.map(i => '- ' + i).join('\n')}`;
   }).filter(Boolean).join('\n\n');
+}
+
+// ─── REAL OFFERS (ShopGun API) ───────────────────────────────────────────────
+
+async function fetchRealOffers(shops) {
+  if (!shops.length) return null;
+  const cacheKey = 'mp_offers_' + [...shops].sort().join(',');
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      const { data, ts } = JSON.parse(cached);
+      if (Date.now() - ts < 30 * 60 * 1000) return data; // 30 min
+    }
+  } catch { /* ignore parse errors */ }
+
+  try {
+    const res = await fetch('offers.php?shops=' + shops.join(','));
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.error) {
+      console.warn('[MadPlan] Tilbuds-API fejl:', data.error, data.message || '');
+      return null;
+    }
+    sessionStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() }));
+    return data;
+  } catch (e) {
+    console.warn('[MadPlan] Kunne ikke hente tilbud:', e.message);
+    return null;
+  }
 }
 
 // ─── VARIATION — RECENT MEALS ─────────────────────────────────────────────────
@@ -1077,6 +1143,8 @@ async function generateLunchPlan() {
   genBtn.disabled       = true;
 
   const shopNames  = settings.shops.map(id => STORE_OFFERS[id]?.name || id);
+  realOffers = await fetchRealOffers(settings.shops);
+  renderOffersRow();
   const offersText = getFilteredOffersText(settings.shops);
   const dietStr    = settings.dietTags.length ? settings.dietTags.join(', ') : '';
   const budgetVal  = document.getElementById('lunch-budget').value;
