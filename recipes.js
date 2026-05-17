@@ -1,6 +1,5 @@
 /* ===========================
    MADPLAN — Opskriftskartotek
-   Udvid listen her over tid.
    =========================== */
 
 const RECIPES = [
@@ -12,6 +11,7 @@ const RECIPES = [
     name: 'Frikadeller med kartofler og brun sovs',
     category: 'klassisk',
     tags: ['klassisk dansk', 'børnevenlig', 'familie'],
+    dietary: [],
     ingredients: ['svinekød', 'løg', 'æg', 'mel', 'mælk', 'smør', 'kartofler'],
   },
   {
@@ -19,6 +19,7 @@ const RECIPES = [
     name: 'Hakkebøf med bløde løg og kartofler',
     category: 'klassisk',
     tags: ['klassisk dansk', 'hurtig', 'børnevenlig'],
+    dietary: ['glutenfri', 'laktosefri'],
     ingredients: ['oksekød', 'løg', 'smør', 'kartofler'],
   },
   {
@@ -26,6 +27,7 @@ const RECIPES = [
     name: 'Stegt flæsk med persillesovs og kartofler',
     category: 'klassisk',
     tags: ['klassisk dansk', 'hurtig'],
+    dietary: [],
     ingredients: ['flæsk', 'kartofler', 'persille', 'smør', 'mel', 'mælk'],
   },
   {
@@ -33,6 +35,7 @@ const RECIPES = [
     name: 'Flæskesteg med rødkål og brunede kartofler',
     category: 'klassisk',
     tags: ['klassisk dansk', 'weekend', 'festmad'],
+    dietary: ['glutenfri', 'laktosefri'],
     ingredients: ['svinekød', 'kartofler', 'rødkål', 'æbler', 'laurbær'],
   },
   {
@@ -40,6 +43,7 @@ const RECIPES = [
     name: 'Biksemad med spejlæg',
     category: 'klassisk',
     tags: ['klassisk dansk', 'restemat', 'hurtig'],
+    dietary: ['glutenfri', 'laktosefri'],
     ingredients: ['kartofler', 'pølse', 'løg', 'æg', 'smør'],
   },
   {
@@ -47,6 +51,7 @@ const RECIPES = [
     name: 'Æggekage med bacon og purløg',
     category: 'klassisk',
     tags: ['klassisk dansk', 'hurtig', 'billig'],
+    dietary: [],
     ingredients: ['æg', 'bacon', 'purløg', 'mel', 'mælk', 'smør'],
   },
   {
@@ -54,6 +59,7 @@ const RECIPES = [
     name: 'Karbonader med kartoffelsalat og remoulade',
     category: 'klassisk',
     tags: ['klassisk dansk', 'børnevenlig'],
+    dietary: [],
     ingredients: ['svinekød', 'rasp', 'æg', 'smør', 'kartofler'],
   },
   {
@@ -61,6 +67,7 @@ const RECIPES = [
     name: 'Skipper labskovs',
     category: 'klassisk',
     tags: ['klassisk dansk', 'comfort food', 'vinter'],
+    dietary: ['glutenfri', 'laktosefri'],
     ingredients: ['oksekød', 'kartofler', 'løg', 'laurbær'],
   },
   {
@@ -68,6 +75,7 @@ const RECIPES = [
     name: 'Medisterpølse med kartofler og rødkål',
     category: 'klassisk',
     tags: ['klassisk dansk', 'enkel'],
+    dietary: ['glutenfri', 'laktosefri'],
     ingredients: ['medisterpølse', 'kartofler', 'rødkål'],
   },
   {
@@ -75,6 +83,7 @@ const RECIPES = [
     name: 'Stegt svinekam med persillesovs og kartofler',
     category: 'klassisk',
     tags: ['klassisk dansk', 'weekend'],
+    dietary: [],
     ingredients: ['svinekød', 'kartofler', 'persille', 'smør', 'mel', 'mælk'],
   },
   {
@@ -82,6 +91,7 @@ const RECIPES = [
     name: 'Boller i karry med ris',
     category: 'klassisk',
     tags: ['klassisk dansk', 'børnevenlig', 'familie'],
+    dietary: [],
     ingredients: ['oksekød', 'svinekød', 'løg', 'karry', 'mel', 'smør', 'mælk', 'ris'],
   },
   {
@@ -89,6 +99,7 @@ const RECIPES = [
     name: 'Brændende kærlighed med bacon og løg',
     category: 'klassisk',
     tags: ['klassisk dansk', 'comfort food', 'børnevenlig'],
+    dietary: ['glutenfri'],
     ingredients: ['kartofler', 'bacon', 'løg', 'smør', 'mælk'],
   },
   {
@@ -96,6 +107,7 @@ const RECIPES = [
     name: 'Svensk pølseret med kartofler og sennepssovs',
     category: 'klassisk',
     tags: ['skandinavisk', 'hurtig', 'børnevenlig'],
+    dietary: ['glutenfri'],
     ingredients: ['pølse', 'kartofler', 'løg', 'fløde', 'sennep', 'smør'],
   },
   {
@@ -103,6 +115,7 @@ const RECIPES = [
     name: 'Mørbradgryde med champignon og flødesovs',
     category: 'klassisk',
     tags: ['klassisk dansk', 'weekend', 'festmad'],
+    dietary: ['glutenfri'],
     ingredients: ['svinekød', 'champignon', 'bacon', 'løg', 'fløde', 'kartofler'],
   },
   {
@@ -110,6 +123,7 @@ const RECIPES = [
     name: 'Baconruller i kartoffelfad med grønt',
     category: 'klassisk',
     tags: ['klassisk dansk', 'ovnret', 'familie'],
+    dietary: ['glutenfri'],
     ingredients: ['bacon', 'kartofler', 'broccoli', 'løg', 'fløde', 'ost'],
   },
   {
@@ -117,6 +131,7 @@ const RECIPES = [
     name: 'Tærte med porre og bacon',
     category: 'klassisk',
     tags: ['klassisk dansk', 'weekend', 'frokost'],
+    dietary: [],
     ingredients: ['bacon', 'porre', 'æg', 'fløde', 'ost', 'mel', 'smør'],
   },
 
@@ -127,6 +142,7 @@ const RECIPES = [
     name: 'Ovnstegt hel kylling med rosmarin og rodfrugter',
     category: 'kød',
     tags: ['weekend', 'klassisk'],
+    dietary: ['glutenfri', 'laktosefri'],
     ingredients: ['kylling', 'kartofler', 'gulerødder', 'løg', 'hvidløg', 'rosmarin', 'citron'],
   },
   {
@@ -134,6 +150,7 @@ const RECIPES = [
     name: 'Citronkylling med ris og dampede grøntsager',
     category: 'kød',
     tags: ['hurtig', 'let'],
+    dietary: ['glutenfri'],
     ingredients: ['kylling', 'citron', 'hvidløg', 'ris', 'broccoli', 'smør'],
   },
   {
@@ -141,6 +158,7 @@ const RECIPES = [
     name: 'Kylling tikka masala med basmatiris og raita',
     category: 'internationalt',
     tags: ['indisk', 'krydret'],
+    dietary: ['glutenfri'],
     ingredients: ['kylling', 'tomat', 'fløde', 'løg', 'hvidløg', 'ingefær', 'ris', 'yoghurt'],
   },
   {
@@ -148,6 +166,7 @@ const RECIPES = [
     name: 'Butter chicken med naan og raita',
     category: 'internationalt',
     tags: ['indisk', 'mild'],
+    dietary: [],
     ingredients: ['kylling', 'smør', 'tomat', 'fløde', 'løg', 'hvidløg', 'ingefær', 'yoghurt'],
   },
   {
@@ -155,6 +174,7 @@ const RECIPES = [
     name: 'Wok med kylling, grøntsager og sojasovs',
     category: 'internationalt',
     tags: ['asiatisk', 'hurtig', 'let'],
+    dietary: ['glutenfri', 'laktosefri'],
     ingredients: ['kylling', 'gulerødder', 'peberfrugt', 'sojasovs', 'hvidløg', 'ingefær', 'ris'],
   },
   {
@@ -162,6 +182,7 @@ const RECIPES = [
     name: 'Kyllingewrap med avocado og krydderurt',
     category: 'internationalt',
     tags: ['hurtig', 'let', 'nem'],
+    dietary: [],
     ingredients: ['kylling', 'tortilla', 'salat', 'tomat', 'rødløg', 'creme fraiche'],
   },
   {
@@ -169,6 +190,7 @@ const RECIPES = [
     name: 'Hjemmelavet kyllingeshawarma med pitabrød',
     category: 'internationalt',
     tags: ['mellemøstlig', 'populær'],
+    dietary: [],
     ingredients: ['kylling', 'pitabrød', 'løg', 'tomat', 'salat', 'hvidløg', 'yoghurt'],
   },
   {
@@ -176,6 +198,7 @@ const RECIPES = [
     name: 'Kylling i fad med kartofler og timian',
     category: 'kød',
     tags: ['enkel', 'weekend'],
+    dietary: ['glutenfri'],
     ingredients: ['kylling', 'kartofler', 'løg', 'hvidløg', 'timian', 'citron', 'smør'],
   },
 
@@ -186,6 +209,7 @@ const RECIPES = [
     name: 'Spaghetti bolognese med revet parmesan',
     category: 'pasta',
     tags: ['italiensk', 'familie', 'fryseegnet'],
+    dietary: [],
     ingredients: ['oksekød', 'spaghetti', 'tomat', 'løg', 'hvidløg', 'gulerødder', 'parmesan'],
   },
   {
@@ -193,6 +217,7 @@ const RECIPES = [
     name: 'Lasagne al forno med bechamelsovs',
     category: 'pasta',
     tags: ['italiensk', 'familie', 'fryseegnet'],
+    dietary: [],
     ingredients: ['oksekød', 'lasagneplader', 'tomat', 'løg', 'hvidløg', 'mælk', 'mel', 'smør', 'ost'],
   },
   {
@@ -200,6 +225,7 @@ const RECIPES = [
     name: 'Chili con carne med ris og rømme',
     category: 'internationalt',
     tags: ['mexicansk', 'fryseegnet', 'krydret'],
+    dietary: ['glutenfri', 'laktosefri'],
     ingredients: ['oksekød', 'kidneybønner', 'tomat', 'løg', 'hvidløg', 'chili', 'ris'],
   },
   {
@@ -207,6 +233,7 @@ const RECIPES = [
     name: 'Tacos med hakket oksekød og salsa',
     category: 'internationalt',
     tags: ['mexicansk', 'børnevenlig', 'familie'],
+    dietary: [],
     ingredients: ['oksekød', 'tortilla', 'tomat', 'salat', 'løg', 'ost', 'majs'],
   },
   {
@@ -214,6 +241,7 @@ const RECIPES = [
     name: 'Hjemmelavede burgere med pommes frites',
     category: 'internationalt',
     tags: ['populær', 'weekend', 'børnevenlig'],
+    dietary: [],
     ingredients: ['oksekød', 'burgerboller', 'salat', 'tomat', 'løg', 'ost', 'kartofler'],
   },
 
@@ -224,6 +252,7 @@ const RECIPES = [
     name: 'Pulled pork i burgerboller med coleslaw',
     category: 'internationalt',
     tags: ['weekend', 'populær'],
+    dietary: [],
     ingredients: ['svinekød', 'burgerboller', 'hvidkål', 'gulerødder', 'æbler', 'mayonnaise'],
   },
 
@@ -234,6 +263,7 @@ const RECIPES = [
     name: 'Ovnbagt laks med dild, kartofler og agurk-cremefraiche',
     category: 'fisk',
     tags: ['let', 'sund', 'hurtig'],
+    dietary: ['glutenfri'],
     ingredients: ['laks', 'citron', 'dild', 'kartofler', 'smør', 'creme fraiche', 'agurk'],
   },
   {
@@ -241,6 +271,7 @@ const RECIPES = [
     name: 'Pasta med laks og cremet dild-flødesovs',
     category: 'fisk',
     tags: ['hurtig', 'let'],
+    dietary: [],
     ingredients: ['laks', 'pasta', 'fløde', 'hvidløg', 'dild', 'citron'],
   },
   {
@@ -248,6 +279,7 @@ const RECIPES = [
     name: 'Bagels med røget laks, flødeost og dild',
     category: 'fisk',
     tags: ['frokost', 'hurtig', 'let'],
+    dietary: [],
     ingredients: ['laks', 'bagels', 'flødeost', 'dild', 'rødløg', 'citron'],
   },
   {
@@ -255,6 +287,7 @@ const RECIPES = [
     name: 'Fiskefrikadeller med remoulade og kogte kartofler',
     category: 'fisk',
     tags: ['klassisk dansk'],
+    dietary: [],
     ingredients: ['fisk', 'æg', 'mel', 'dild', 'kartofler', 'løg'],
   },
   {
@@ -262,6 +295,7 @@ const RECIPES = [
     name: 'Paneret torsk med remoulade, ærter og pommes frites',
     category: 'fisk',
     tags: ['klassisk', 'børnevenlig'],
+    dietary: [],
     ingredients: ['torsk', 'rasp', 'æg', 'kartofler', 'ærter', 'citron'],
   },
   {
@@ -269,6 +303,7 @@ const RECIPES = [
     name: 'Cremet fiskesuppe med grøntsager og dild',
     category: 'fisk',
     tags: ['suppe', 'sund'],
+    dietary: ['glutenfri'],
     ingredients: ['fisk', 'gulerødder', 'løg', 'fløde', 'kartofler', 'dild'],
   },
   {
@@ -276,6 +311,7 @@ const RECIPES = [
     name: 'Rejer stegt i hvidløgssmør med brød og citron',
     category: 'fisk',
     tags: ['hurtig', 'festmad'],
+    dietary: [],
     ingredients: ['rejer', 'smør', 'hvidløg', 'persille', 'citron', 'brød'],
   },
 
@@ -286,6 +322,7 @@ const RECIPES = [
     name: 'Pasta carbonara med bacon og parmesan',
     category: 'pasta',
     tags: ['italiensk', 'hurtig'],
+    dietary: [],
     ingredients: ['spaghetti', 'bacon', 'æg', 'parmesan', 'hvidløg'],
   },
   {
@@ -293,6 +330,7 @@ const RECIPES = [
     name: 'Pasta med pesto, kylling og cherrytomater',
     category: 'pasta',
     tags: ['italiensk', 'hurtig'],
+    dietary: [],
     ingredients: ['pasta', 'kylling', 'pesto', 'tomat', 'mozzarella', 'parmesan', 'hvidløg'],
   },
   {
@@ -300,6 +338,7 @@ const RECIPES = [
     name: 'Linguine med rejer, hvidløg og persille',
     category: 'pasta',
     tags: ['italiensk', 'festmad'],
+    dietary: [],
     ingredients: ['pasta', 'rejer', 'hvidløg', 'smør', 'persille', 'citron', 'tomat'],
   },
   {
@@ -307,6 +346,7 @@ const RECIPES = [
     name: 'Pasta primavera med årstidens grøntsager og fløde',
     category: 'pasta',
     tags: ['vegetarisk', 'forår'],
+    dietary: ['vegetarisk'],
     ingredients: ['pasta', 'broccoli', 'gulerødder', 'ærter', 'løg', 'hvidløg', 'fløde', 'parmesan'],
   },
   {
@@ -314,6 +354,7 @@ const RECIPES = [
     name: 'Pasta med kylling, bacon, karrydressing og spinat',
     category: 'pasta',
     tags: ['populær', 'hurtig'],
+    dietary: [],
     ingredients: ['pasta', 'kylling', 'bacon', 'spinat', 'karry', 'mayonnaise', 'fløde', 'løg'],
   },
 
@@ -324,6 +365,7 @@ const RECIPES = [
     name: 'Røde linser dahl med kokosmælk, basmatiris og naan',
     category: 'vegetar',
     tags: ['vegetarisk', 'vegansk', 'indisk'],
+    dietary: ['vegetarisk', 'vegansk', 'laktosefri'],
     ingredients: ['linser', 'kokosmælk', 'tomat', 'løg', 'hvidløg', 'ingefær', 'karry', 'ris'],
   },
   {
@@ -331,6 +373,7 @@ const RECIPES = [
     name: 'Kikærtekarry med spinat, kokosmælk og basmatiris',
     category: 'vegetar',
     tags: ['vegetarisk', 'vegansk', 'indisk'],
+    dietary: ['vegetarisk', 'vegansk', 'glutenfri', 'laktosefri'],
     ingredients: ['kikærter', 'spinat', 'tomat', 'løg', 'hvidløg', 'ingefær', 'kokosmælk', 'karry', 'ris'],
   },
   {
@@ -338,6 +381,7 @@ const RECIPES = [
     name: 'Kikærtegryde med tomat, paprika og feta',
     category: 'vegetar',
     tags: ['vegetarisk', 'hurtig', 'mellemøstlig'],
+    dietary: ['vegetarisk', 'glutenfri'],
     ingredients: ['kikærter', 'tomat', 'peberfrugt', 'løg', 'hvidløg', 'feta', 'spinat'],
   },
   {
@@ -345,6 +389,7 @@ const RECIPES = [
     name: 'Hjemmelavet grøntsagssuppe med brød',
     category: 'vegetar',
     tags: ['vegetarisk', 'vegansk', 'sund'],
+    dietary: ['vegetarisk', 'vegansk', 'laktosefri'],
     ingredients: ['gulerødder', 'løg', 'selleri', 'kartofler', 'persille', 'brød'],
   },
   {
@@ -352,6 +397,7 @@ const RECIPES = [
     name: 'Cremet tomatsuppe med croutoner',
     category: 'vegetar',
     tags: ['vegetarisk', 'hurtig'],
+    dietary: ['vegetarisk'],
     ingredients: ['tomat', 'løg', 'hvidløg', 'fløde', 'smør', 'brød'],
   },
   {
@@ -359,6 +405,7 @@ const RECIPES = [
     name: 'Hjemmelavede falafler med hummus og pitabrød',
     category: 'vegetar',
     tags: ['vegetarisk', 'vegansk', 'mellemøstlig'],
+    dietary: ['vegetarisk', 'vegansk', 'laktosefri'],
     ingredients: ['kikærter', 'løg', 'hvidløg', 'persille', 'spidskommen', 'pitabrød', 'tomat', 'salat'],
   },
   {
@@ -366,6 +413,7 @@ const RECIPES = [
     name: 'Champignonrisotto med parmesan og timian',
     category: 'vegetar',
     tags: ['italiensk', 'vegetarisk', 'weekend'],
+    dietary: ['vegetarisk', 'glutenfri'],
     ingredients: ['risottoris', 'champignon', 'løg', 'hvidløg', 'parmesan', 'smør', 'fløde'],
   },
 
@@ -376,16 +424,15 @@ const RECIPES = [
     name: 'Okonomiyaki — japansk inspireret madpandekage',
     category: 'internationalt',
     tags: ['japansk', 'anderledes', 'hurtig'],
+    dietary: [],
     ingredients: ['hvidkål', 'æg', 'mel', 'bacon', 'sojasovs', 'mayonnaise', 'purløg'],
   },
-
-  // ── DIVERSE ─────────────────────────────────────────────────────────────────
-
   {
     id: 'fried-rice',
     name: 'Stegt ris med æg, grøntsager og sojasovs',
     category: 'internationalt',
     tags: ['asiatisk', 'restemat', 'hurtig'],
+    dietary: ['vegetarisk', 'glutenfri', 'laktosefri'],
     ingredients: ['ris', 'æg', 'sojasovs', 'løg', 'gulerødder', 'ærter', 'hvidløg'],
   },
 

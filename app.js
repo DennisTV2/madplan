@@ -89,15 +89,15 @@ const STORE_OFFERS = {
       'Friske krydderurter: 18 kr ★',
     ],
   },
-  aldi: {
-    name: 'Aldi', color: 'aldi',
-    chips: ['Hakket svin 30kr/500g', 'Æbler 15kr/kg', 'Smør 18kr'],
-    items: [
-      'Hakket svinekød 500g: 30 kr ★',
-      'Æbler 1kg: 15 kr ★',
-      'Smør 250g: 18 kr ★',
-      'Mælk 1L: 7 kr ★',
-    ],
+  bilka: {
+    name: 'Bilka', color: 'bilka',
+    chips: ['Storkøb tilbud aktive'],
+    items: ['Stort udvalg — hent live tilbud'],
+  },
+  fotex: {
+    name: 'Føtex', color: 'fotex',
+    chips: ['Føtex tilbud aktive'],
+    items: ['Stort udvalg — hent live tilbud'],
   },
   coop: {
     name: 'Coop', color: 'coop',
@@ -398,7 +398,7 @@ async function generatePlan() {
   realOffers = await fetchRealOffers(settings.shops);
   renderOffersRow();
 
-  const scoredRecipes = scoreRecipesAgainstOffers(settings.shops);
+  const scoredRecipes = scoreRecipesAgainstOffers(settings.shops, settings.dietTags);
 
   const includeRules = settings.prefs.filter(p => p.type === 'include')
     .map(p => `${p.ingredient}${p.count ? ' (mindst ' + p.count + ' retter i ugen)' : ''}`).join(', ');
@@ -738,7 +738,10 @@ function renderPlan(plan) {
             ${kidsHtml}
           </div>
           <div class="meal-price">${meal.price_per_person ? meal.price_per_person + ' kr/p' : ''}</div>
-          <button class="swap-btn" onclick="swapMeal(${dayIdx},${mealIdx})">🔄 Udskift</button>
+          <div class="meal-actions">
+            <button class="swap-btn" onclick="swapMeal(${dayIdx},${mealIdx})">🔄 Udskift</button>
+            <button class="save-meal-btn" onclick="saveMealToFavorites(${dayIdx},${mealIdx})" title="Gem til mine opskrifter">♡</button>
+          </div>
         </div>`;
     });
 
@@ -1318,7 +1321,7 @@ function renderLunchPlan(plan) {
 
 // ─── RECIPE SCORING ──────────────────────────────────────────────────────────
 
-function scoreRecipesAgainstOffers(shops) {
+function scoreRecipesAgainstOffers(shops, dietTags = []) {
   let offerText = '';
   if (realOffers?.grouped) {
     offerText = shops.flatMap(id =>
@@ -1331,7 +1334,23 @@ function scoreRecipesAgainstOffers(shops) {
   }
   if (!offerText) return [];
 
-  return RECIPES
+  // Map UI diet labels → dietary array keys
+  const dietMap = {
+    'Vegetarisk': 'vegetarisk',
+    'Vegansk':    'vegansk',
+    'Glutenfrit': 'glutenfri',
+    'Laktosefri': 'laktosefri',
+  };
+  const requiredDiets = dietTags
+    .map(t => Object.entries(dietMap).find(([k]) => t.includes(k))?.[1])
+    .filter(Boolean);
+
+  let pool = RECIPES;
+  if (requiredDiets.length) {
+    pool = pool.filter(r => requiredDiets.every(d => (r.dietary || []).includes(d)));
+  }
+
+  return pool
     .map(r => {
       const matched = r.ingredients.filter(ing => offerText.includes(ing.toLowerCase()));
       return { ...r, score: matched.length, matched };
@@ -1462,11 +1481,36 @@ function renderRecipeCatalog() {
     searchInput._bound = true;
     searchInput.addEventListener('input', e => {
       recipeSearchQuery = e.target.value.trim().toLowerCase();
+      renderSavedRecipesSection();
       renderRecipeGrid();
     });
   }
+  renderSavedRecipesSection();
   renderRecipeCategoryFilter();
   renderRecipeGrid();
+}
+
+function renderSavedRecipesSection() {
+  const container = document.getElementById('saved-recipes-section');
+  if (!container) return;
+  const saved = getSavedMeals();
+  const q = recipeSearchQuery;
+  const filtered = q ? saved.filter(m => m.name.toLowerCase().includes(q) || m.description.toLowerCase().includes(q)) : saved;
+
+  if (!filtered.length) { container.innerHTML = ''; return; }
+
+  container.innerHTML = `
+    <div class="saved-section-label">⭐ Mine gemte retter</div>
+    <div class="recipe-grid">${filtered.map(m => `
+      <div class="recipe-card saved-recipe-card">
+        <div class="recipe-card-photo-placeholder">⭐</div>
+        <div class="recipe-card-body">
+          <div class="recipe-card-name">${m.name}</div>
+          ${m.description ? `<div class="recipe-card-meta">${m.description.slice(0, 60)}${m.description.length > 60 ? '…' : ''}</div>` : ''}
+        </div>
+        <button class="delete-saved-btn" onclick="deleteSavedMeal('${m.id}')" title="Fjern">×</button>
+      </div>`).join('')}
+    </div>`;
 }
 
 function renderRecipeCategoryFilter() {
@@ -1545,6 +1589,62 @@ function getCategoryEmoji(category) {
   return map[category] || '🍽️';
 }
 
+// ─── SAVED MEALS / FAVORITES ─────────────────────────────────────────────────
+
+function getSavedMealsKey() {
+  return 'mp_saved_meals_' + (currentUser?.email || 'guest');
+}
+
+function saveMealToFavorites(dayIdx, mealIdx) {
+  if (!currentPlan) return;
+  const meal = currentPlan.plan[dayIdx]?.meals[mealIdx];
+  if (!meal) return;
+
+  const saved = JSON.parse(localStorage.getItem(getSavedMealsKey()) || '[]');
+  const exists = saved.some(m => m.name.toLowerCase() === meal.name.toLowerCase());
+  if (exists) {
+    showToast('Allerede gemt i dine opskrifter');
+    return;
+  }
+  saved.unshift({
+    id: 'saved_' + Date.now(),
+    name: meal.name,
+    description: meal.description || '',
+    store: meal.store || '',
+    tags: meal.tags || [],
+    savedAt: new Date().toLocaleDateString('da-DK', { day: 'numeric', month: 'short' }),
+  });
+  localStorage.setItem(getSavedMealsKey(), JSON.stringify(saved.slice(0, 50)));
+
+  // Visual feedback on button
+  const btn = event?.target;
+  if (btn) { btn.textContent = '♥'; btn.classList.add('saved'); }
+  showToast('Gemt til dine opskrifter ♥');
+}
+
+function getSavedMeals() {
+  return JSON.parse(localStorage.getItem(getSavedMealsKey()) || '[]');
+}
+
+function deleteSavedMeal(id) {
+  const saved = getSavedMeals().filter(m => m.id !== id);
+  localStorage.setItem(getSavedMealsKey(), JSON.stringify(saved));
+  renderRecipeCatalog();
+}
+
+function showToast(msg) {
+  let toast = document.getElementById('mp-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'mp-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.className = 'mp-toast show';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
 // ─── INDKØB PAGE ──────────────────────────────────────────────────────────────
 
 function renderIndkob() {
@@ -1598,7 +1698,79 @@ function renderIndkob() {
     <button class="action-btn" style="width:100%;justify-content:center" onclick="exportShoppingList(window.currentPlan)">📋 Eksportér indkøbsliste</button>
   </div>`;
 
+  // Custom items section
+  const customItems = getCustomItems();
+  html += `
+    <div class="custom-items-section">
+      <div class="custom-items-label">🛍️ Egne varer</div>
+      <div id="custom-items-list">
+        ${customItems.map(item => `
+          <div class="shop-item" id="row_ci_${item.id}">
+            <div class="shop-cb${item.checked ? ' checked' : ''}" id="ci_${item.id}" onclick="toggleCustomItem('${item.id}')"></div>
+            <div class="shop-item-name" style="${item.checked ? 'text-decoration:line-through;color:var(--light)' : ''}">${item.name}</div>
+            <button class="remove-btn" onclick="removeCustomItem('${item.id}')" style="margin-left:auto">×</button>
+          </div>`).join('')}
+      </div>
+      <div class="custom-item-add">
+        <input type="text" id="custom-item-input" class="custom-item-input" placeholder="Tilføj vare — f.eks. shampoo, tandpasta...">
+        <button class="custom-item-btn" onclick="addCustomItem()">Tilføj</button>
+      </div>
+    </div>`;
+
   container.innerHTML = html;
+
+  // Re-wire Enter key on input
+  const input = container.querySelector('#custom-item-input');
+  if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') addCustomItem(); });
+}
+
+function getCustomItemsKey() {
+  return 'mp_custom_items_' + (currentUser?.email || 'guest');
+}
+
+function getCustomItems() {
+  return JSON.parse(localStorage.getItem(getCustomItemsKey()) || '[]');
+}
+
+function saveCustomItems(items) {
+  localStorage.setItem(getCustomItemsKey(), JSON.stringify(items));
+}
+
+function addCustomItem() {
+  const input = document.getElementById('custom-item-input');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+  const items = getCustomItems();
+  items.push({ id: 'ci_' + Date.now(), name, checked: false });
+  saveCustomItems(items);
+  input.value = '';
+  renderIndkob();
+  // Restore focus on input after re-render
+  setTimeout(() => {
+    const newInput = document.getElementById('custom-item-input');
+    if (newInput) newInput.focus();
+  }, 50);
+}
+
+function removeCustomItem(id) {
+  saveCustomItems(getCustomItems().filter(i => i.id !== id));
+  renderIndkob();
+}
+
+function toggleCustomItem(id) {
+  const items = getCustomItems().map(i => i.id === id ? { ...i, checked: !i.checked } : i);
+  saveCustomItems(items);
+  // Update DOM directly without full re-render
+  const cb = document.getElementById('ci_' + id);
+  const row = document.getElementById('row_ci_' + id);
+  if (cb) cb.classList.toggle('checked');
+  const nameEl = row?.querySelector('.shop-item-name');
+  if (nameEl) {
+    const isChecked = cb?.classList.contains('checked');
+    nameEl.style.textDecoration = isChecked ? 'line-through' : '';
+    nameEl.style.color = isChecked ? 'var(--light)' : '';
+  }
 }
 
 // ─── KEYBOARD SHORTCUTS ──────────────────────────────────────────────────────
