@@ -1343,31 +1343,76 @@ function getDayEmoji(dayNum) {
   return emojis[(dayNum - 1) % emojis.length];
 }
 
+const PHOTO_QUERIES = [
+  // Klassisk dansk
+  ['frikadeller',               'danish meatballs brown gravy potatoes'],
+  ['hakkebøf',                  'hamburger steak onion gravy potatoes'],
+  ['stegt flæsk',               'danish fried pork belly parsley sauce'],
+  ['flæskesteg',                'pork roast red cabbage caramelized potatoes'],
+  ['biksemad',                  'hash potatoes fried egg pan'],
+  ['æggekage',                  'danish egg cake bacon omelette skillet'],
+  ['karbonader',                'pork chop potato salad remoulade'],
+  ['labskovs',                  'beef potato stew nordic'],
+  ['medisterpølse',             'pork sausage red cabbage danish'],
+  ['svinekam',                  'roast pork loin parsley sauce potatoes'],
+  ['boller i karry',            'meatballs curry sauce rice danish'],
+  ['brændende kærlighed',       'mashed potatoes bacon caramelized onion'],
+  ['pølseret',                  'sausage potatoes mustard sauce'],
+  ['mørbradgryde',              'pork tenderloin mushroom cream sauce'],
+  ['baconruller',               'bacon rolls potato casserole baked'],
+  ['tærte med porre',           'quiche leek bacon tart'],
+  // Kød & kylling
+  ['hel kylling',               'whole roast chicken rosemary root vegetables'],
+  ['citronkylling',             'lemon chicken rice steamed vegetables'],
+  ['tikka masala',              'chicken tikka masala basmati rice'],
+  ['butter chicken',            'butter chicken naan bread'],
+  ['wok med kylling',           'chicken stir fry wok vegetables noodles'],
+  ['kyllingewrap',              'chicken wrap avocado herb tortilla'],
+  ['shawarma',                  'chicken shawarma pita wrap'],
+  ['kylling i fad',             'baked chicken thighs potatoes thyme'],
+  // Oksekød & international
+  ['bolognese',                 'spaghetti bolognese meat sauce parmesan'],
+  ['lasagne',                   'lasagna baked cheese bechamel'],
+  ['chili con carne',           'chili con carne rice sour cream'],
+  ['tacos',                     'beef tacos salsa guacamole mexican'],
+  ['burgere',                   'homemade burger fries beef'],
+  ['pulled pork',               'pulled pork burger coleslaw bun'],
+  // Fisk & skaldyr
+  ['ovnbagt laks',              'baked salmon dill potatoes cucumber'],
+  ['pasta med laks',            'salmon pasta cream dill'],
+  ['bagels med røget laks',     'bagel smoked salmon cream cheese dill'],
+  ['fiskefrikadeller',          'fish cakes remoulade potatoes danish'],
+  ['paneret torsk',             'breaded cod fish chips peas'],
+  ['fiskesuppe',                'creamy fish chowder vegetables dill'],
+  ['rejer',                     'garlic butter shrimp prawns bread lemon'],
+  // Pasta
+  ['carbonara',                 'pasta carbonara egg bacon parmesan'],
+  ['pesto',                     'pesto pasta chicken cherry tomatoes'],
+  ['linguine',                  'linguine shrimp garlic butter parsley'],
+  ['primavera',                 'pasta primavera spring vegetables cream'],
+  ['pasta med kylling',         'pasta chicken bacon spinach creamy'],
+  // Vegetar
+  ['linser dahl',               'red lentil dahl coconut milk naan'],
+  ['kikærtekarry',              'chickpea curry spinach coconut milk rice'],
+  ['kikærtegryde',              'chickpea stew tomato feta baked'],
+  ['grøntsagssuppe',            'homemade vegetable soup bread bowl'],
+  ['tomatsuppe',                'tomato soup cream croutons'],
+  ['falafler',                  'falafel hummus pita bread plate'],
+  ['risotto',                   'mushroom risotto parmesan herb'],
+  ['okonomiyaki',               'okonomiyaki japanese savory pancake'],
+  ['stegt ris',                 'fried rice egg vegetables wok'],
+];
+
 function getPhotoQuery(mealName) {
   const n = mealName.toLowerCase();
-  if (n.includes('pasta') || n.includes('spaghetti') || n.includes('lasagne') || n.includes('carbonara') || n.includes('bolognese') || n.includes('penne')) return 'pasta italian food';
-  if (n.includes('pizza')) return 'pizza';
-  if (n.includes('tikka') || n.includes('karry') || n.includes('curry') || n.includes('dahl')) return 'curry dish';
-  if (n.includes('kylling') || n.includes('chicken')) return 'chicken dinner';
-  if (n.includes('laks') || n.includes('salmon')) return 'salmon fillet';
-  if (n.includes('torsk') || n.includes('fisk') || n.includes('fiskefilet')) return 'fish fillet dinner';
-  if (n.includes('frikadeller') || n.includes('kødboller')) return 'meatballs dinner';
-  if (n.includes('bøf') || n.includes('steak') || n.includes('okse')) return 'beef steak dinner';
-  if (n.includes('burger')) return 'hamburger';
-  if (n.includes('tacos') || n.includes('taco') || n.includes('wrap') || n.includes('tortilla')) return 'tacos mexican food';
-  if (n.includes('wok') || n.includes('sushi')) return 'asian food wok';
-  if (n.includes('suppe')) return 'soup bowl';
-  if (n.includes('salat')) return 'salad fresh bowl';
-  if (n.includes('grød')) return 'oatmeal porridge bowl';
-  if (n.includes('æg') || n.includes('omelet') || n.includes('shakshuka')) return 'eggs breakfast';
-  if (n.includes('svin') || n.includes('flæsk') || n.includes('bacon')) return 'pork dinner';
-  if (n.includes('pølse')) return 'sausage dinner';
-  if (n.includes('ris')) return 'rice dish';
+  for (const [keyword, query] of PHOTO_QUERIES) {
+    if (n.includes(keyword)) return query;
+  }
   return 'food dinner plate homemade';
 }
 
 async function fetchMealPhoto(mealName) {
-  const key = 'mp_photo_' + mealName.toLowerCase().replace(/[^a-z0-9æøå]/g, '_').slice(0, 60);
+  const key = 'mp_photo2_' + mealName.toLowerCase().replace(/[^a-z0-9æøå]/g, '_').slice(0, 60);
   try {
     const cached = localStorage.getItem(key);
     if (cached) {
