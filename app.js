@@ -361,6 +361,8 @@ async function generatePlan() {
   realOffers = await fetchRealOffers(settings.shops);
   renderOffersRow();
 
+  const scoredRecipes = scoreRecipesAgainstOffers(settings.shops);
+
   const includeRules = settings.prefs.filter(p => p.type === 'include')
     .map(p => `${p.ingredient}${p.count ? ' (mindst ' + p.count + ' retter i ugen)' : ''}`).join(', ');
   const excludeRules = settings.prefs.filter(p => p.type === 'exclude')
@@ -462,7 +464,28 @@ Eksempel for alder ${settings.kids.age} år:
 
 Vælg aktiviteter der passer til alderen – for 3-5 år: enkle og sikre opgaver uden varme; for 14+: selvstændige trin.` : ''}
 
-${catalogHint}════════════════════════════════════
+${scoredRecipes.length ? `════════════════════════════════════
+OPSKRIFTSKARTOTEK — ANBEFALEDE RETTER I DAG
+════════════════════════════════════
+
+Disse retter fra vores kartotek bruger flest ingredienser fra aktuelle tilbud.
+Vælg mindst ${Math.min(Math.ceil(settings.days * 0.6), scoredRecipes.length)} af disse som aftensmad i planen:
+
+${scoredRecipes.slice(0, 8).map((r, i) =>
+    `${i + 1}. ${r.name}
+   Tilbudsvarer der hører naturligt til i denne ret: ${r.matched.join(', ')}`
+  ).join('\n')}
+
+KULINARISK REGEL (OVERHOLD ALTID):
+Brug KUN tilbudsvarer der er AUTENTISKE ingredienser i den valgte ret.
+Eksempler på hvad der ALDRIG må ske:
+• Broccoli tilhører IKKE tikka masala, tacos, bolognese eller biksemad
+• Laks tilhører IKKE pasta carbonara, lasagne eller kylling-wok
+• Kokosmælk tilhører IKKE klassiske danske retter som frikadeller eller stegt flæsk
+• Chili tilhører IKKE citronkylling, frikadeller eller ovnkylling
+Hvis en tilbudsvare IKKE fremgår af rettenens naturlige ingredienser ovenfor — brug den IKKE.
+
+` : catalogHint}════════════════════════════════════
 TILBUDSAVISER — KUN DISSE BUTIKKER: ${selectedShopNames.join(', ')}
 ════════════════════════════════════
 
@@ -1277,6 +1300,30 @@ function renderLunchPlan(plan) {
   }
 
   container.innerHTML = html;
+}
+
+// ─── RECIPE SCORING ──────────────────────────────────────────────────────────
+
+function scoreRecipesAgainstOffers(shops) {
+  let offerText = '';
+  if (realOffers?.grouped) {
+    offerText = shops.flatMap(id =>
+      (realOffers.grouped[id] || []).map(o => o.heading.toLowerCase())
+    ).join(' ');
+  } else {
+    offerText = shops.flatMap(id =>
+      (STORE_OFFERS[id]?.items || []).map(i => i.toLowerCase())
+    ).join(' ');
+  }
+  if (!offerText) return [];
+
+  return RECIPES
+    .map(r => {
+      const matched = r.ingredients.filter(ing => offerText.includes(ing.toLowerCase()));
+      return { ...r, score: matched.length, matched };
+    })
+    .filter(r => r.score > 0)
+    .sort((a, b) => b.score - a.score);
 }
 
 // ─── KEYBOARD SHORTCUTS ──────────────────────────────────────────────────────
