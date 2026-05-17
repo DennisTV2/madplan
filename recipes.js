@@ -77,6 +77,48 @@ const RECIPES = [
     tags: ['klassisk dansk', 'weekend'],
     ingredients: ['svinekød', 'kartofler', 'persille', 'smør', 'mel', 'mælk'],
   },
+  {
+    id: 'boller-i-karry',
+    name: 'Boller i karry med ris',
+    category: 'klassisk',
+    tags: ['klassisk dansk', 'børnevenlig', 'familie'],
+    ingredients: ['oksekød', 'svinekød', 'løg', 'karry', 'mel', 'smør', 'mælk', 'ris'],
+  },
+  {
+    id: 'brændende-kærlighed',
+    name: 'Brændende kærlighed med bacon og løg',
+    category: 'klassisk',
+    tags: ['klassisk dansk', 'comfort food', 'børnevenlig'],
+    ingredients: ['kartofler', 'bacon', 'løg', 'smør', 'mælk'],
+  },
+  {
+    id: 'svensk-pølseret',
+    name: 'Svensk pølseret med kartofler og sennepssovs',
+    category: 'klassisk',
+    tags: ['skandinavisk', 'hurtig', 'børnevenlig'],
+    ingredients: ['pølse', 'kartofler', 'løg', 'fløde', 'sennep', 'smør'],
+  },
+  {
+    id: 'mørbradgryde',
+    name: 'Mørbradgryde med champignon og flødesovs',
+    category: 'klassisk',
+    tags: ['klassisk dansk', 'weekend', 'festmad'],
+    ingredients: ['svinekød', 'champignon', 'bacon', 'løg', 'fløde', 'kartofler'],
+  },
+  {
+    id: 'baconruller',
+    name: 'Baconruller i kartoffelfad med grønt',
+    category: 'klassisk',
+    tags: ['klassisk dansk', 'ovnret', 'familie'],
+    ingredients: ['bacon', 'kartofler', 'broccoli', 'løg', 'fløde', 'ost'],
+  },
+  {
+    id: 'tærte-porre-bacon',
+    name: 'Tærte med porre og bacon',
+    category: 'klassisk',
+    tags: ['klassisk dansk', 'weekend', 'frokost'],
+    ingredients: ['bacon', 'porre', 'æg', 'fløde', 'ost', 'mel', 'smør'],
+  },
 
   // ── KYLLING ─────────────────────────────────────────────────────────────────
 
@@ -174,13 +216,6 @@ const RECIPES = [
     tags: ['populær', 'weekend', 'børnevenlig'],
     ingredients: ['oksekød', 'burgerboller', 'salat', 'tomat', 'løg', 'ost', 'kartofler'],
   },
-  {
-    id: 'moussaka',
-    name: 'Moussaka med aubergine og bechamelsovs',
-    category: 'internationalt',
-    tags: ['græsk', 'weekend'],
-    ingredients: ['oksekød', 'aubergine', 'løg', 'hvidløg', 'tomat', 'mælk', 'mel', 'smør', 'ost'],
-  },
 
   // ── SVINEKØD ────────────────────────────────────────────────────────────────
 
@@ -207,6 +242,13 @@ const RECIPES = [
     category: 'fisk',
     tags: ['hurtig', 'let'],
     ingredients: ['laks', 'pasta', 'fløde', 'hvidløg', 'dild', 'citron'],
+  },
+  {
+    id: 'bagels-laks',
+    name: 'Bagels med røget laks, flødeost og dild',
+    category: 'fisk',
+    tags: ['frokost', 'hurtig', 'let'],
+    ingredients: ['laks', 'bagels', 'flødeost', 'dild', 'rødløg', 'citron'],
   },
   {
     id: 'fiskefrikadeller',
@@ -248,10 +290,10 @@ const RECIPES = [
   },
   {
     id: 'pasta-pesto',
-    name: 'Pasta med pesto, cherrytomater og mozzarella',
+    name: 'Pasta med pesto, kylling og cherrytomater',
     category: 'pasta',
-    tags: ['italiensk', 'hurtig', 'vegetarisk'],
-    ingredients: ['pasta', 'pesto', 'tomat', 'mozzarella', 'parmesan', 'hvidløg'],
+    tags: ['italiensk', 'hurtig'],
+    ingredients: ['pasta', 'kylling', 'pesto', 'tomat', 'mozzarella', 'parmesan', 'hvidløg'],
   },
   {
     id: 'pasta-rejer',
@@ -267,16 +309,16 @@ const RECIPES = [
     tags: ['vegetarisk', 'forår'],
     ingredients: ['pasta', 'broccoli', 'gulerødder', 'ærter', 'løg', 'hvidløg', 'fløde', 'parmesan'],
   },
+  {
+    id: 'pasta-kylling-bacon-karry',
+    name: 'Pasta med kylling, bacon, karrydressing og spinat',
+    category: 'pasta',
+    tags: ['populær', 'hurtig'],
+    ingredients: ['pasta', 'kylling', 'bacon', 'spinat', 'karry', 'mayonnaise', 'fløde', 'løg'],
+  },
 
   // ── VEGETAR ─────────────────────────────────────────────────────────────────
 
-  {
-    id: 'shakshuka',
-    name: 'Shakshuka — æg pocheret i krydret tomatsauce',
-    category: 'vegetar',
-    tags: ['vegetarisk', 'hurtig', 'mellemøstlig'],
-    ingredients: ['æg', 'tomat', 'løg', 'hvidløg', 'peberfrugt', 'spidskommen', 'brød'],
-  },
   {
     id: 'dahl',
     name: 'Røde linser dahl med kokosmælk, basmatiris og naan',
@@ -285,18 +327,18 @@ const RECIPES = [
     ingredients: ['linser', 'kokosmælk', 'tomat', 'løg', 'hvidløg', 'ingefær', 'karry', 'ris'],
   },
   {
-    id: 'vegetarisk-chili',
-    name: 'Vegetarisk chili con carne med ris og rømme',
-    category: 'vegetar',
-    tags: ['vegetarisk', 'vegansk', 'fryseegnet'],
-    ingredients: ['kidneybønner', 'tomat', 'løg', 'hvidløg', 'peberfrugt', 'majs', 'chili', 'ris'],
-  },
-  {
     id: 'kikærte-karry',
     name: 'Kikærtekarry med spinat, kokosmælk og basmatiris',
     category: 'vegetar',
     tags: ['vegetarisk', 'vegansk', 'indisk'],
     ingredients: ['kikærter', 'spinat', 'tomat', 'løg', 'hvidløg', 'ingefær', 'kokosmælk', 'karry', 'ris'],
+  },
+  {
+    id: 'kikærtegryde',
+    name: 'Kikærtegryde med tomat, paprika og feta',
+    category: 'vegetar',
+    tags: ['vegetarisk', 'hurtig', 'mellemøstlig'],
+    ingredients: ['kikærter', 'tomat', 'peberfrugt', 'løg', 'hvidløg', 'feta', 'spinat'],
   },
   {
     id: 'grøntsagssuppe',
@@ -327,21 +369,14 @@ const RECIPES = [
     ingredients: ['risottoris', 'champignon', 'løg', 'hvidløg', 'parmesan', 'smør', 'fløde'],
   },
 
-  // ── SUPPER ──────────────────────────────────────────────────────────────────
+  // ── INTERNATIONALT ──────────────────────────────────────────────────────────
 
   {
-    id: 'gule-ærter',
-    name: 'Gule ærter med røget svinekød og grøntsager',
-    category: 'suppe',
-    tags: ['klassisk dansk', 'vinter', 'comfort food'],
-    ingredients: ['gule ærter', 'svinekød', 'gulerødder', 'selleri', 'løg', 'kartofler'],
-  },
-  {
-    id: 'linsesuppe',
-    name: 'Krydret linsesuppe med tomat og spidskommen',
-    category: 'suppe',
-    tags: ['vegetarisk', 'vegansk', 'hurtig'],
-    ingredients: ['linser', 'løg', 'hvidløg', 'gulerødder', 'tomat', 'spidskommen'],
+    id: 'okonomiyaki',
+    name: 'Okonomiyaki — japansk inspireret madpandekage',
+    category: 'internationalt',
+    tags: ['japansk', 'anderledes', 'hurtig'],
+    ingredients: ['hvidkål', 'æg', 'mel', 'bacon', 'sojasovs', 'mayonnaise', 'purløg'],
   },
 
   // ── DIVERSE ─────────────────────────────────────────────────────────────────
@@ -352,13 +387,6 @@ const RECIPES = [
     category: 'internationalt',
     tags: ['asiatisk', 'restemat', 'hurtig'],
     ingredients: ['ris', 'æg', 'sojasovs', 'løg', 'gulerødder', 'ærter', 'hvidløg'],
-  },
-  {
-    id: 'paella',
-    name: 'Simpel paella med kylling, rejer og paprika',
-    category: 'internationalt',
-    tags: ['spansk', 'weekend', 'festmad'],
-    ingredients: ['ris', 'kylling', 'rejer', 'løg', 'hvidløg', 'tomat', 'peberfrugt'],
   },
 
 ];
