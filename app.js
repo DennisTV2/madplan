@@ -1511,6 +1511,8 @@ async function loadPlanPhotos() {
 
 let activeRecipeCategory = null;
 let recipeSearchQuery = '';
+let rdPersons = 4;
+let rdCurrentName = '';
 
 function renderRecipeCatalog() {
   const searchInput = document.getElementById('recipe-search');
@@ -1539,13 +1541,13 @@ function renderSavedRecipesSection() {
   container.innerHTML = `
     <div class="saved-section-label">⭐ Mine gemte retter</div>
     <div class="recipe-grid">${filtered.map(m => `
-      <div class="recipe-card saved-recipe-card">
+      <div class="recipe-card saved-recipe-card" onclick="showRecipeDetail(null,'${m.name.replace(/'/g,"\\'")}')">
         <div class="recipe-card-photo-placeholder">⭐</div>
         <div class="recipe-card-body">
           <div class="recipe-card-name">${m.name}</div>
           ${m.description ? `<div class="recipe-card-meta">${m.description.slice(0, 60)}${m.description.length > 60 ? '…' : ''}</div>` : ''}
         </div>
-        <button class="delete-saved-btn" onclick="deleteSavedMeal('${m.id}')" title="Fjern">×</button>
+        <button class="delete-saved-btn" onclick="event.stopPropagation();deleteSavedMeal('${m.id}')" title="Fjern">×</button>
       </div>`).join('')}
     </div>`;
 }
@@ -1597,19 +1599,111 @@ function filterRecipes(category) {
   renderRecipeGrid();
 }
 
-function showRecipeDetail(recipeId) {
-  const r = RECIPES.find(rec => rec.id === recipeId);
-  if (!r) return;
-  document.getElementById('rd-name').textContent = r.name;
-  document.getElementById('rd-category').innerHTML =
-    `${getCategoryEmoji(r.category)} <span>${catDanish(r.category)}</span>`;
-  document.getElementById('rd-tags').innerHTML =
-    r.tags.map(t => `<span class="cat-chip">${t}</span>`).join('');
-  document.getElementById('rd-ingredients').innerHTML =
-    (r.ingredients || []).map(i =>
-      `<div class="rd-ingredient"><span class="rd-dot"></span>${i}</div>`
-    ).join('');
+function showRecipeDetail(recipeId, overrideName = null) {
+  const r = recipeId ? RECIPES.find(rec => rec.id === recipeId) : null;
+  const name = overrideName || r?.name || '';
+  if (!name) return;
+
+  rdCurrentName = name;
+  rdPersons = persons; // sync with global setting
+
+  document.getElementById('rd-name').textContent = name;
+  document.getElementById('rd-category').innerHTML = r
+    ? `${getCategoryEmoji(r.category)} <span>${catDanish(r.category)}</span>`
+    : '🍽️ <span>Ret</span>';
+
+  // Tags: dietary first, then regular tags
+  const dietLabels = { vegetarisk: '🌿 Vegetarisk', vegansk: '🌱 Vegansk', glutenfri: '🌾 Glutenfri', laktosefri: '🥛 Laktosefri' };
+  const dietChips = (r?.dietary || []).map(d => `<span class="cat-chip" style="background:var(--green-50);color:var(--primary)">${dietLabels[d] || d}</span>`);
+  const tagChips = (r?.tags || []).slice(0, 3).map(t => `<span class="cat-chip">${t}</span>`);
+  document.getElementById('rd-tags').innerHTML = [...dietChips, ...tagChips].join('');
+
+  // Persons row
+  document.getElementById('rd-persons-val').textContent = rdPersons;
+  updateRdScaleNote();
+
+  // Ingredients
+  const ingredients = r?.ingredients || [];
+  document.getElementById('rd-ingredients').innerHTML = ingredients.length
+    ? ingredients.map(i => `<div class="rd-ingredient"><span class="rd-dot"></span>${i}</div>`).join('')
+    : '<div class="rd-ingredient" style="color:var(--muted);font-style:italic">Ingen ingrediensliste tilgængelig</div>';
+
+  // Steps — show spinner, then load
+  document.getElementById('rd-steps').innerHTML = '<div class="rd-steps-loading">Henter fremgangsmåde…</div>';
   document.getElementById('recipe-detail-modal').style.display = 'flex';
+
+  fetchRecipeSteps(name, ingredients, rdPersons);
+}
+
+function updateRdScaleNote() {
+  const note = document.getElementById('rd-scale-note');
+  if (!note) return;
+  const base = 4;
+  if (rdPersons === base) { note.textContent = ''; return; }
+  const ratio = Math.round((rdPersons / base) * 10) / 10;
+  note.textContent = `(×${ratio} af mængderne)`;
+}
+
+function adjustRdPersons(d) {
+  rdPersons = Math.max(1, Math.min(20, rdPersons + d));
+  document.getElementById('rd-persons-val').textContent = rdPersons;
+  updateRdScaleNote();
+}
+
+async function fetchRecipeSteps(name, ingredients, numPersons) {
+  // 30-day localStorage cache per recipe name
+  const key = 'mp_steps_' + name.toLowerCase().replace(/[^a-zæøå0-9]/g, '_').replace(/_+/g, '_');
+  try {
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      const { steps, ts } = JSON.parse(cached);
+      if (Date.now() - ts < 30 * 24 * 3600 * 1000) {
+        renderRecipeSteps(steps);
+        return;
+      }
+    }
+  } catch { /* stale cache */ }
+
+  try {
+    const ingList = ingredients.length ? `\nIngredienser: ${ingredients.join(', ')}` : '';
+    const res = await fetch('proxy.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 700,
+        messages: [{
+          role: 'user',
+          content: `Lav en kort trin-for-trin fremgangsmåde til "${name}" til ${numPersons} person${numPersons > 1 ? 'er' : ''}.${ingList}
+
+Svar KUN med en JSON-array af strings (max 7 trin), fx:
+["Skær løg og hvidløg i små tern.", "Brun kødet på høj varme i 3–4 min.", "..."]
+Vær konkret og kortfattet. Ingen tal-præfikser i strengene.`
+        }]
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const text = data?.content?.[0]?.text || '';
+    const match = text.match(/\[[\s\S]*?\]/);
+    if (!match) throw new Error('no json array');
+    const steps = JSON.parse(match[0]);
+    if (!Array.isArray(steps) || !steps.length) throw new Error('empty');
+    localStorage.setItem(key, JSON.stringify({ steps, ts: Date.now() }));
+    renderRecipeSteps(steps);
+  } catch {
+    document.getElementById('rd-steps').innerHTML = '<div class="rd-steps-error">Fremgangsmåde ikke tilgængelig</div>';
+  }
+}
+
+function renderRecipeSteps(steps) {
+  const el = document.getElementById('rd-steps');
+  if (!el) return;
+  el.innerHTML = steps.map((s, i) => `
+    <div class="rd-step">
+      <div class="rd-step-num">${i + 1}</div>
+      <div class="rd-step-text">${s.replace(/^trin\s*\d+[:.]\s*/i, '')}</div>
+    </div>`).join('');
 }
 
 function closeRecipeDetail() {

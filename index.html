@@ -452,7 +452,7 @@
 </nav>
 
 <script src="recipes.js?v=1"></script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 
 <!-- RECIPE DETAIL MODAL -->
 <div id="recipe-detail-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeRecipeDetail()">
@@ -463,8 +463,18 @@
     </div>
     <div class="rd-name" id="rd-name"></div>
     <div class="rd-tags" id="rd-tags"></div>
+    <div class="rd-persons-row">
+      <span class="rd-persons-icon">👥</span>
+      <button class="rd-persons-btn" onclick="adjustRdPersons(-1)">−</button>
+      <span id="rd-persons-val">4</span>
+      <span class="rd-persons-unit">pers.</span>
+      <button class="rd-persons-btn" onclick="adjustRdPersons(1)">+</button>
+      <span id="rd-scale-note" class="rd-scale-note"></span>
+    </div>
     <div class="rd-section-label">Ingredienser</div>
     <div class="rd-ingredients" id="rd-ingredients"></div>
+    <div class="rd-section-label rd-steps-label">Fremgangsmåde</div>
+    <div class="rd-steps" id="rd-steps"></div>
   </div>
 </div>
 
