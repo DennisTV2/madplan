@@ -17,8 +17,55 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$body = file_get_contents('php://input');
-$data = json_decode($body, true);
+// ── Streaming mode ──────────────────────────────────────────────────────────
+$rawBody = file_get_contents('php://input');
+$reqData = json_decode($rawBody ?: '{}', true);
+
+if (!empty($reqData['stream'])) {
+    while (ob_get_level()) ob_end_clean();
+    @ini_set('output_buffering', '0');
+    @ini_set('implicit_flush', '1');
+    header('Content-Type: text/event-stream; charset=utf-8');
+    header('Cache-Control: no-cache');
+    header('X-Accel-Buffering: no');
+
+    if (!isset($reqData['messages'])) {
+        echo "data: {\"error\":\"no messages\"}\n\n"; exit;
+    }
+
+    $streamPayload = json_encode([
+        'model'      => $reqData['model'] ?? 'claude-sonnet-4-6',
+        'max_tokens' => $reqData['max_tokens'] ?? 8000,
+        'stream'     => true,
+        'messages'   => $reqData['messages'],
+    ]);
+
+    $ch = curl_init('https://api.anthropic.com/v1/messages');
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $streamPayload,
+        CURLOPT_HTTPHEADER     => [
+            'Content-Type: application/json',
+            'x-api-key: ' . ANTHROPIC_API_KEY,
+            'anthropic-version: 2023-06-01',
+        ],
+        CURLOPT_TIMEOUT        => 120,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_WRITEFUNCTION  => function($ch, $data) {
+            echo $data;
+            @ob_flush();
+            @flush();
+            return strlen($data);
+        },
+    ]);
+    curl_exec($ch);
+    curl_close($ch);
+    exit;
+}
+// ── End streaming mode ───────────────────────────────────────────────────────
+
+$body = $rawBody;
+$data = $reqData;
 
 if (!$data || !isset($data['messages'])) {
     http_response_code(400);
