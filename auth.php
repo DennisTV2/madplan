@@ -159,5 +159,60 @@ if ($action === 'logout') {
     exit;
 }
 
+// ── SKIFT KODEORD ─────────────────────────────────────────────────────────────
+if ($action === 'changePassword') {
+    if (empty($_SESSION['mp_user'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Ikke logget ind']);
+        exit;
+    }
+
+    $email       = $_SESSION['mp_user']['email'] ?? '';
+    $currentPass = $data['currentPassword'] ?? '';
+    $newPass     = $data['newPassword']     ?? '';
+
+    if (!$currentPass || !$newPass) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Udfyld begge felter']);
+        exit;
+    }
+    if (strlen($newPass) < 6) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Nyt kodeord skal være mindst 6 tegn']);
+        exit;
+    }
+
+    // Demo-konto kan ikke skifte kodeord
+    if ($email === 'demo@madplan.dk') {
+        http_response_code(403);
+        echo json_encode(['error' => 'Demo-kontoen kan ikke ændres']);
+        exit;
+    }
+
+    try {
+        $stmt = getDB()->prepare('SELECT password_hash FROM users WHERE email = ? LIMIT 1');
+        $stmt->execute([$email]);
+        $row = $stmt->fetch();
+
+        if (!$row || !password_verify($currentPass, $row['password_hash'])) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Nuværende kodeord er forkert']);
+            exit;
+        }
+
+        $hash = password_hash($newPass, PASSWORD_BCRYPT, ['cost' => 12]);
+        $stmt = getDB()->prepare('UPDATE users SET password_hash = ? WHERE email = ?');
+        $stmt->execute([$hash, $email]);
+
+        echo json_encode(['ok' => true]);
+
+    } catch (Exception $e) {
+        error_log('[MadPlan changePassword] ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Databasefejl – prøv igen']);
+    }
+    exit;
+}
+
 http_response_code(400);
 echo json_encode(['error' => 'Ukendt handling']);

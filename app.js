@@ -195,6 +195,53 @@ async function doSignup() {
   }
 }
 
+// ─── SKIFT KODEORD (profil) ───────────────────────────────────────────────────
+
+async function doChangePassword() {
+  const current = document.getElementById('cp-current').value;
+  const newPass  = document.getElementById('cp-new').value;
+  const newPass2 = document.getElementById('cp-new2').value;
+  const btn      = document.getElementById('cp-btn');
+
+  if (!current)           { showChangePassMsg('Indtast dit nuværende kodeord', false); return; }
+  if (newPass.length < 6) { showChangePassMsg('Nyt kodeord skal være mindst 6 tegn', false); return; }
+  if (newPass !== newPass2) { showChangePassMsg('De to kodeord er ikke ens', false); return; }
+
+  btn.disabled = true; btn.textContent = 'Gemmer…';
+  try {
+    const res  = await fetch('auth.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'changePassword', currentPassword: current, newPassword: newPass }),
+    });
+    const data = await res.json();
+    if (data.error) { showChangePassMsg(data.error, false); return; }
+    showChangePassMsg('Kodeord er opdateret ✓', true);
+    document.getElementById('cp-current').value = '';
+    document.getElementById('cp-new').value     = '';
+    document.getElementById('cp-new2').value    = '';
+  } catch {
+    showChangePassMsg('Kunne ikke forbinde – prøv igen', false);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Skift kodeord';
+  }
+}
+
+function showChangePassMsg(msg, success) {
+  const el = document.getElementById('change-pass-msg');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  if (success) {
+    el.style.background = 'var(--green-50)'; el.style.color = '#15803d';
+    el.style.border = '1px solid #bbf7d0';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  } else {
+    el.style.background = '#fef2f2'; el.style.color = '#dc2626';
+    el.style.border = '1px solid #fecaca';
+  }
+}
+
 // ─── GLEMT ADGANGSKODE ───────────────────────────────────────────────────────
 
 function showForgotForm() {
@@ -1862,6 +1909,7 @@ let activeRecipeCategory = null;
 let recipeSearchQuery = '';
 let rdPersons = 4;
 let rdCurrentName = '';
+let rdBaseIngredients = [];
 
 function renderRecipeCatalog() {
   const searchInput = document.getElementById('recipe-search');
@@ -1971,11 +2019,9 @@ function showRecipeDetail(recipeId, overrideName = null) {
   document.getElementById('rd-persons-val').textContent = rdPersons;
   updateRdScaleNote();
 
-  // Ingredients
-  const ingredients = r?.ingredients || [];
-  document.getElementById('rd-ingredients').innerHTML = ingredients.length
-    ? ingredients.map(i => `<div class="rd-ingredient"><span class="rd-dot"></span>${i}</div>`).join('')
-    : '<div class="rd-ingredient" style="color:var(--muted);font-style:italic">Ingen ingrediensliste tilgængelig</div>';
+  // Ingredients — store originals, render scaled
+  rdBaseIngredients = r?.ingredients || [];
+  renderRdIngredients();
 
   // Steps — show spinner, then load
   document.getElementById('rd-steps').innerHTML = '<div class="rd-steps-loading">Henter fremgangsmåde…</div>';
@@ -1997,6 +2043,37 @@ function adjustRdPersons(d) {
   rdPersons = Math.max(1, Math.min(20, rdPersons + d));
   document.getElementById('rd-persons-val').textContent = rdPersons;
   updateRdScaleNote();
+  renderRdIngredients();
+}
+
+// Skaler en ingrediensstreng (fx "400g kylling" → "200g kylling" ved ratio 0.5)
+function scaleIngredient(str, ratio) {
+  if (Math.abs(ratio - 1) < 0.001) return str;
+  const m = str.match(/^(\d+(?:[.,]\d+)?)/);
+  if (!m) return str;
+  const orig = parseFloat(m[1].replace(',', '.'));
+  if (!orig || isNaN(orig)) return str;
+  const scaled = orig * ratio;
+  let display;
+  if (scaled >= 100)    display = String(Math.round(scaled));
+  else if (scaled >= 10) display = String(Math.round(scaled * 2) / 2);
+  else if (scaled >= 1)  display = String(Math.round(scaled * 4) / 4);
+  else                   display = String(Math.round(scaled * 10) / 10);
+  display = display.replace(/\.0$/, '');
+  return str.replace(m[1], display);
+}
+
+function renderRdIngredients() {
+  const el = document.getElementById('rd-ingredients');
+  if (!el) return;
+  if (!rdBaseIngredients.length) {
+    el.innerHTML = '<div class="rd-ingredient" style="color:var(--muted);font-style:italic">Ingen ingrediensliste tilgængelig</div>';
+    return;
+  }
+  const ratio = rdPersons / 4; // opskrifter er baseret på 4 pers.
+  el.innerHTML = rdBaseIngredients
+    .map(i => `<div class="rd-ingredient"><span class="rd-dot"></span>${scaleIngredient(i, ratio)}</div>`)
+    .join('');
 }
 
 async function fetchRecipeSteps(name, ingredients, numPersons) {
