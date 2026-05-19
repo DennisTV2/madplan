@@ -530,7 +530,9 @@ window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
   setTimeout(() => {
-    if (deferredPrompt && !localStorage.getItem('pwa-dismissed')) {
+    const dismissed = parseInt(localStorage.getItem('pwa-dismissed') || '0');
+    const expired = Date.now() - dismissed > 30 * 24 * 3600 * 1000; // 30 dage
+    if (deferredPrompt && (!dismissed || expired)) {
       banner.style.display = 'flex';
     }
   }, 3000);
@@ -548,7 +550,7 @@ function installPWA() {
 
 function dismissBanner() {
   banner.style.display = 'none';
-  localStorage.setItem('pwa-dismissed', '1');
+  localStorage.setItem('pwa-dismissed', Date.now().toString());
 }
 
 window.addEventListener('appinstalled', () => {
@@ -559,7 +561,9 @@ window.addEventListener('appinstalled', () => {
 // iOS install hint
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isInStandalone = window.navigator.standalone;
-if (isIOS && !isInStandalone && !localStorage.getItem('pwa-dismissed')) {
+const _iosDismissed = parseInt(localStorage.getItem('pwa-dismissed') || '0');
+const _iosExpired = Date.now() - _iosDismissed > 30 * 24 * 3600 * 1000;
+if (isIOS && !isInStandalone && (!_iosDismissed || _iosExpired)) {
   setTimeout(() => {
     const iosBanner = document.createElement('div');
     iosBanner.style.cssText = 'position:fixed;bottom:calc(68px + 1rem);left:50%;transform:translateX(-50%);z-index:9999;background:#0F172A;color:#F8FAFC;border-radius:14px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.25);max-width:380px;width:calc(100% - 3rem);font-family:system-ui,sans-serif';

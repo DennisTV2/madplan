@@ -3,9 +3,9 @@
    PWA offline cache + background sync
    ═══════════════════════════════════════ */
 
-const CACHE_NAME = 'madplan-v2';
-const STATIC_CACHE = 'madplan-static-v2';
-const API_CACHE = 'madplan-api-v2';
+const CACHE_NAME = 'madplan-v3';
+const STATIC_CACHE = 'madplan-static-v3';
+const API_CACHE = 'madplan-api-v3';
 
 // Files to cache for offline use
 const STATIC_FILES = [
@@ -13,10 +13,11 @@ const STATIC_FILES = [
   '/index.html',
   '/style.css',
   '/app.js',
+  '/recipes.js',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  'https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;700&display=swap',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap',
 ];
 
 // ─── INSTALL ──────────────────────────────────────────────────────────────────
@@ -87,34 +88,34 @@ self.addEventListener('fetch', event => {
   }
 
   // App shell (HTML, CSS, JS, icons) → Cache first, then network
-  if (
-    url.origin === self.location.origin ||
-    STATIC_FILES.includes(event.request.url)
-  ) {
+  // ignoreSearch:true so versioned URLs like app.js?v=7 match cached /app.js
+  if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(event.request).then(cached => {
+      caches.match(event.request, { ignoreSearch: true }).then(cached => {
         if (cached) {
-          // Return cached, but revalidate in background
-          const fetchPromise = fetch(event.request).then(networkResponse => {
+          // Serve cached, revalidate in background (stale-while-revalidate)
+          fetch(event.request).then(networkResponse => {
             if (networkResponse && networkResponse.status === 200) {
               caches.open(STATIC_CACHE).then(cache => cache.put(event.request, networkResponse.clone()));
             }
-            return networkResponse;
-          }).catch(() => {/* offline, cached version served */});
+          }).catch(() => {/* offline — cached version served */});
           return cached;
         }
 
         // Not in cache → fetch and cache
         return fetch(event.request).then(networkResponse => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(STATIC_CACHE).then(cache => cache.put(event.request, clone));
+          if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
+            // Don't cache PHP API responses
+            if (!url.pathname.endsWith('.php')) {
+              const clone = networkResponse.clone();
+              caches.open(STATIC_CACHE).then(cache => cache.put(event.request, clone));
+            }
           }
           return networkResponse;
         }).catch(() => {
-          // Offline fallback — return index.html for navigation requests
+          // Offline fallback — return cached index.html for navigation
           if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
+            return caches.match('/index.html', { ignoreSearch: true });
           }
         });
       })
