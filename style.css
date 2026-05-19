@@ -75,6 +75,10 @@
   --accent-hover: #16A34A;
   --accent-bg:    #F0FDF4;
 
+  /* ── Grønne aliases (bruges i app.js) ── */
+  --green-50:  #F0FDF4;
+  --green-100: #DCFCE7;
+
   /* ── Typography ── */
   --font:      'Inter', system-ui, -apple-system, sans-serif;
   --font-head: 'Inter', system-ui, sans-serif;
@@ -193,6 +197,18 @@ body {
 }
 
 .demo-hint { font-size: 12px; color: var(--faint); margin-top: 1rem; }
+
+.auth-error {
+  background: var(--berry-50);
+  border: 1px solid var(--berry-100);
+  color: var(--berry-600);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  text-align: left;
+}
 
 /* ═══════════════════
    FORM ELEMENTS

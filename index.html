@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MadPlan — AI-drevet madplanlægger</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -27,8 +27,14 @@
 </head>
 <body>
 
+<!-- SPLASH (vises mens session tjekkes) -->
+<div id="splash-screen" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999">
+  <div style="font-size:2.2rem;font-weight:800;letter-spacing:-1px;color:var(--text)">Mad<em style="color:var(--primary);font-style:normal">Plan</em></div>
+  <div style="margin-top:1.5rem;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+</div>
+
 <!-- AUTH -->
-<div id="auth-screen">
+<div id="auth-screen" style="display:none">
   <div class="auth-card">
     <div class="auth-emblem">🌿</div>
     <div class="auth-logo">Mad<em>Plan</em></div>
@@ -37,16 +43,18 @@
       <button class="auth-tab active" onclick="switchTab('login')">Log ind</button>
       <button class="auth-tab" onclick="switchTab('signup')">Opret konto</button>
     </div>
+    <!-- Fejlbesked -->
+    <div id="auth-error" class="auth-error" style="display:none"></div>
     <div id="login-form">
-      <div class="input-group"><label>E-mail</label><input type="email" id="login-email" placeholder="din@email.dk" value="demo@madplan.dk"></div>
-      <div class="input-group"><label>Adgangskode</label><input type="password" id="login-pass" placeholder="••••••••" value="demo123"></div>
+      <div class="input-group"><label>E-mail</label><input type="email" id="login-email" placeholder="din@email.dk" autocomplete="email"></div>
+      <div class="input-group"><label>Adgangskode</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="btn-primary" onclick="doLogin()">Log ind</button>
-      <div class="demo-hint">Brug <strong>demo@madplan.dk</strong> / <strong>demo123</strong> for at prøve</div>
+      <div class="demo-hint">Prøv med <strong>demo@madplan.dk</strong> / <strong>demo123</strong></div>
     </div>
     <div id="signup-form" style="display:none">
-      <div class="input-group"><label>Navn</label><input type="text" id="signup-name" placeholder="Dit navn"></div>
-      <div class="input-group"><label>E-mail</label><input type="email" id="signup-email" placeholder="din@email.dk"></div>
-      <div class="input-group"><label>Adgangskode</label><input type="password" id="signup-pass" placeholder="Min. 6 tegn"></div>
+      <div class="input-group"><label>Navn</label><input type="text" id="signup-name" placeholder="Dit fulde navn" autocomplete="name"></div>
+      <div class="input-group"><label>E-mail</label><input type="email" id="signup-email" placeholder="din@email.dk" autocomplete="email"></div>
+      <div class="input-group"><label>Adgangskode</label><input type="password" id="signup-pass" placeholder="Min. 6 tegn" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignup()"></div>
       <button class="btn-primary" onclick="doSignup()">Opret konto</button>
     </div>
   </div>
@@ -452,7 +460,7 @@
 </nav>
 
 <script src="recipes.js?v=1"></script>
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 
 <!-- RECIPE DETAIL MODAL -->
 <div id="recipe-detail-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeRecipeDetail()">

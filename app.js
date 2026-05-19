@@ -19,8 +19,7 @@ let lunchDays = 5;
 let lunchPersons = 2;
 let realOffers = null; // Sættes af fetchRealOffers() — null = brug fallback
 
-// Load from localStorage
-let users   = JSON.parse(localStorage.getItem('mp_users') || '[]');
+// Plan-historik (lokal cache pr. enhed — brugerprofil er server-side)
 let history = JSON.parse(localStorage.getItem('mp_history') || '[]');
 
 // ─── STORE OFFERS DATA ────────────────────────────────────────────────────────
@@ -121,39 +120,102 @@ function switchTab(tab) {
   document.getElementById('signup-form').style.display = tab === 'signup' ? '' : 'none';
 }
 
-function doLogin() {
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const pass  = document.getElementById('login-pass').value;
+// ── AUTH-HJÆLPERE ─────────────────────────────────────────────────────────────
 
-  // Demo account
-  if (email === 'demo@madplan.dk' && pass === 'demo123') {
-    currentUser = { name: 'Demo Bruger', email: 'demo@madplan.dk' };
-    enterApp();
-    return;
-  }
-
-  const u = users.find(u => u.email === email && u.pass === pass);
-  if (!u) { alert('Forkert e-mail eller adgangskode'); return; }
-  currentUser = { name: u.name, email: u.email };
-  enterApp();
+function setAuthLoading(formId, loading) {
+  const btn = document.querySelector(`#${formId} .btn-primary`);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.textContent = loading
+    ? (formId === 'login-form' ? 'Logger ind…' : 'Opretter konto…')
+    : (formId === 'login-form' ? 'Log ind'      : 'Opret konto');
 }
 
-function doSignup() {
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+function hideAuthError() {
+  const el = document.getElementById('auth-error');
+  if (el) el.style.display = 'none';
+}
+
+async function doLogin() {
+  hideAuthError();
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) { showAuthError('Udfyld e-mail og adgangskode'); return; }
+
+  setAuthLoading('login-form', true);
+  try {
+    const res  = await fetch('auth.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'login', email, password: pass }),
+    });
+    const data = await res.json();
+    if (data.error) { showAuthError(data.error); return; }
+    currentUser = data.user;
+    enterApp();
+  } catch {
+    showAuthError('Kunne ikke forbinde til serveren – prøv igen');
+  } finally {
+    setAuthLoading('login-form', false);
+  }
+}
+
+async function doSignup() {
+  hideAuthError();
   const name  = document.getElementById('signup-name').value.trim();
   const email = document.getElementById('signup-email').value.trim().toLowerCase();
   const pass  = document.getElementById('signup-pass').value;
 
-  if (!name || !email || !pass) { alert('Udfyld alle felter'); return; }
-  if (pass.length < 6)          { alert('Adgangskode skal være mindst 6 tegn'); return; }
-  if (users.find(u => u.email === email)) { alert('E-mail er allerede registreret'); return; }
+  if (!name || !email || !pass) { showAuthError('Udfyld alle felter'); return; }
+  if (pass.length < 6)          { showAuthError('Adgangskode skal være mindst 6 tegn'); return; }
 
-  users.push({ name, email, pass });
-  localStorage.setItem('mp_users', JSON.stringify(users));
-  currentUser = { name, email };
-  enterApp();
+  setAuthLoading('signup-form', true);
+  try {
+    const res  = await fetch('auth.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'register', name, email, password: pass }),
+    });
+    const data = await res.json();
+    if (data.error) { showAuthError(data.error); return; }
+    currentUser = data.user;
+    enterApp();
+  } catch {
+    showAuthError('Kunne ikke forbinde til serveren – prøv igen');
+  } finally {
+    setAuthLoading('signup-form', false);
+  }
 }
 
+// Tjek eksisterende session ved sideindlæsning
+async function checkSession() {
+  try {
+    const res  = await fetch('auth.php?action=check');
+    const data = await res.json();
+    if (data.user) {
+      currentUser = data.user;
+      enterApp();
+      return;
+    }
+  } catch { /* ingen session eller netværksfejl → vis login */ }
+  // Vis auth-skærm
+  document.getElementById('splash-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display   = '';
+}
+
+// Kør session-check når DOM er klar
+document.addEventListener('DOMContentLoaded', checkSession);
+
 function enterApp() {
+  document.getElementById('splash-screen')?.remove();
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-screen').style.display  = '';
   document.getElementById('bottom-nav').style.display  = 'flex';
@@ -179,7 +241,14 @@ function enterApp() {
   showPage('plan');
 }
 
-function doLogout() {
+async function doLogout() {
+  try {
+    await fetch('auth.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'logout' }),
+    });
+  } catch { /* ignorer netværksfejl ved logout */ }
   currentUser = null;
   currentPlan = null;
   document.getElementById('auth-screen').style.display = '';
@@ -187,6 +256,9 @@ function doLogout() {
   document.getElementById('bottom-nav').style.display  = 'none';
   document.getElementById('plan-output').style.display = 'none';
   document.getElementById('result-empty').style.display = '';
+  // Ryd login-felter
+  document.getElementById('login-pass').value = '';
+  hideAuthError();
 }
 
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
