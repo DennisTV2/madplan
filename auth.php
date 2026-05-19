@@ -16,9 +16,11 @@ if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
 session_start();
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/ratelimit.php';
 
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin) { header('Access-Control-Allow-Origin: ' . $origin); header('Vary: Origin'); }
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
@@ -73,6 +75,13 @@ if ($action === 'login') {
         exit;
     }
 
+    // Rate limit: max 10 loginforsøg per IP per 15 min
+    if (!rl_check('login_' . rl_ip(), 10, 900)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'For mange loginforsøg – prøv igen om lidt']);
+        exit;
+    }
+
     // Demo-konto (ingen DB-kald)
     if ($email === 'demo@madplan.dk' && $password === 'demo123') {
         $_SESSION['mp_user'] = ['name' => 'Demo Bruger', 'email' => 'demo@madplan.dk'];
@@ -106,6 +115,13 @@ if ($action === 'register') {
     $name     = trim($data['name']     ?? '');
     $email    = strtolower(trim($data['email']    ?? ''));
     $password = $data['password'] ?? '';
+
+    // Rate limit: max 5 oprettelser per IP per time
+    if (!rl_check('register_' . rl_ip(), 5, 3600)) {
+        http_response_code(429);
+        echo json_encode(['error' => 'For mange registreringer – prøv igen om lidt']);
+        exit;
+    }
 
     if (!$name || !$email || !$password) {
         http_response_code(400);

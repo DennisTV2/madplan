@@ -13,9 +13,11 @@ if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
 session_start();
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/ratelimit.php';
 
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin) { header('Access-Control-Allow-Origin: ' . $origin); header('Vary: Origin'); }
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
@@ -44,6 +46,13 @@ if ($action === 'request') {
     if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         http_response_code(400);
         echo json_encode(['error' => 'Ugyldig e-mailadresse']);
+        exit;
+    }
+
+    // Rate limit: max 3 reset-anmodninger per IP per time, og 3 per e-mail per time
+    if (!rl_check('reset_ip_' . rl_ip(), 3, 3600) || !rl_check('reset_em_' . md5($email), 3, 3600)) {
+        // Returner stadig success — afslør ikke at limiten er ramt
+        echo json_encode(['ok' => true]);
         exit;
     }
 
