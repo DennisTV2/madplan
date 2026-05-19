@@ -198,6 +198,21 @@ body {
 
 .demo-hint { font-size: 12px; color: var(--faint); margin-top: 1rem; }
 
+.auth-link-btn {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--green-600);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.15s;
+}
+.auth-link-btn:hover { text-decoration-color: var(--green-600); }
+
 .auth-error {
   background: var(--berry-50);
   border: 1px solid var(--berry-100);

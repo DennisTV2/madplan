@@ -195,8 +195,117 @@ async function doSignup() {
   }
 }
 
+// ─── GLEMT ADGANGSKODE ───────────────────────────────────────────────────────
+
+function showForgotForm() {
+  hideAuthError();
+  document.getElementById('auth-tabs').style.display   = 'none';
+  document.getElementById('login-form').style.display  = 'none';
+  document.getElementById('signup-form').style.display = 'none';
+  document.getElementById('forgot-form').style.display = '';
+  document.getElementById('forgot-email').focus();
+}
+
+function showLoginForm() {
+  hideAuthError();
+  document.getElementById('auth-tabs').style.display   = '';
+  document.getElementById('forgot-form').style.display = 'none';
+  document.getElementById('reset-form').style.display  = 'none';
+  document.getElementById('login-form').style.display  = '';
+  document.getElementById('signup-form').style.display = 'none';
+  // Sæt aktiv tab til login
+  document.querySelectorAll('.auth-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+}
+
+async function doForgotPassword() {
+  hideAuthError();
+  const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+  if (!email || !email.includes('@')) { showAuthError('Indtast en gyldig e-mailadresse'); return; }
+
+  const btn = document.querySelector('#forgot-form .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sender…'; }
+
+  try {
+    const res  = await fetch('reset.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'request', email }),
+    });
+    const data = await res.json();
+    if (data.error) { showAuthError(data.error); return; }
+
+    // Vis bekræftelse (aldrig afslør om e-mail eksisterer)
+    const form = document.getElementById('forgot-form');
+    form.innerHTML = `
+      <div style="text-align:center;padding:0.5rem 0 1rem">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem">📬</div>
+        <p style="font-weight:600;color:var(--text);margin-bottom:0.5rem">Link sendt!</p>
+        <p style="font-size:13px;color:var(--muted);line-height:1.6">
+          Hvis <strong>${email}</strong> er tilknyttet en konto, modtager du om lidt et link til at vælge en ny adgangskode.<br>
+          Tjek evt. spam-mappen.
+        </p>
+        <div style="text-align:center;margin-top:1.25rem">
+          <button class="auth-link-btn" onclick="showLoginForm()">← Tilbage til login</button>
+        </div>
+      </div>`;
+  } catch {
+    showAuthError('Kunne ikke forbinde til serveren – prøv igen');
+  } finally {
+    if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = 'Send nulstilningslink'; }
+  }
+}
+
+// Token gemmes her mens reset-formen vises
+let _resetToken = '';
+
+async function doResetPassword() {
+  hideAuthError();
+  const pass  = document.getElementById('reset-pass').value;
+  const pass2 = document.getElementById('reset-pass2').value;
+
+  if (pass.length < 6)  { showAuthError('Adgangskode skal være mindst 6 tegn'); return; }
+  if (pass !== pass2)   { showAuthError('De to adgangskoder er ikke ens'); return; }
+  if (!_resetToken)     { showAuthError('Ugyldigt reset-link – anmod om et nyt'); return; }
+
+  const btn = document.querySelector('#reset-form .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gemmer…'; }
+
+  try {
+    const res  = await fetch('reset.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'reset', token: _resetToken, password: pass }),
+    });
+    const data = await res.json();
+    if (data.error) { showAuthError(data.error); return; }
+
+    // Ryd token fra URL og log ind
+    window.history.replaceState({}, '', window.location.pathname);
+    currentUser = data.user;
+    enterApp();
+  } catch {
+    showAuthError('Kunne ikke forbinde til serveren – prøv igen');
+  } finally {
+    if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = 'Gem nyt kodeord'; }
+  }
+}
+
 // Tjek eksisterende session ved sideindlæsning
 async function checkSession() {
+  // Tjek om URL indeholder ?reset=TOKEN → vis reset-formular
+  const resetToken = new URLSearchParams(window.location.search).get('reset');
+  if (resetToken) {
+    _resetToken = resetToken;
+    document.getElementById('splash-screen').style.display = 'none';
+    document.getElementById('auth-screen').style.display   = '';
+    document.getElementById('auth-tabs').style.display     = 'none';
+    document.getElementById('login-form').style.display    = 'none';
+    document.getElementById('signup-form').style.display   = 'none';
+    document.getElementById('reset-form').style.display    = '';
+    document.getElementById('reset-pass').focus();
+    return;
+  }
+
   try {
     const res  = await fetch('auth.php?action=check');
     const data = await res.json();
