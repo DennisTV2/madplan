@@ -1424,43 +1424,61 @@ const PHOTO_QUERIES = [
   ['risotto',                   'mushroom risotto parmesan herb'],
   ['okonomiyaki',               'okonomiyaki japanese savory pancake'],
   ['stegt ris',                 'fried rice egg vegetables wok'],
-  // Generiske tilberedningsmåder — dækker AI-genererede retter
-  ['grillet',                   'grilled meat vegetables plate'],
-  ['grillspyd',                 'grilled skewers kebab vegetables'],
-  ['gratin',                    'gratin baked cheese crust dish'],
-  ['ovnbagt',                   'oven baked dish vegetables herbs'],
-  ['ovnstegt',                  'roasted oven dish potatoes herbs'],
-  ['ovnret',                    'casserole baked dish oven'],
-  ['dampet',                    'steamed fish vegetables plate'],
-  ['paneret',                   'breaded fried crispy plate'],
-  ['friturestegt',              'deep fried crispy food plate'],
-  // Generiske madtyper
+  // ── Proteiner checkes FØR tilberedningsmåde ──────────────────────────────
+  // Kylling
+  ['kyllingebryst',             'chicken breast grilled plate herbs lemon'],
+  ['kyllingelår',               'chicken thighs roasted potatoes plate'],
+  ['kyllingefilet',             'chicken fillet pan-fried plate vegetables'],
+  ['kylling',                   'roast chicken dinner plate herbs vegetables'],
+  // Fisk & skaldyr
+  ['ørred',                     'trout fillet pan fried lemon dill plate'],
+  ['tun',                       'tuna steak seared plate vegetables'],
+  ['sild',                      'herring nordic rye bread plate'],
+  ['torsk',                     'cod fillet plate potatoes vegetables'],
+  ['laks',                      'salmon fillet lemon dill plate'],
+  ['fisk',                      'fish fillet dinner plate lemon vegetables'],
+  // Kød
+  ['oksekød',                   'beef stew plate potatoes vegetables'],
+  ['okse',                      'beef steak potatoes gravy plate'],
+  ['svinekød',                  'pork dinner potatoes gravy plate'],
+  ['svin',                      'pork chop potatoes plate'],
+  ['lammekølle',                'lamb leg roasted rosemary potatoes'],
+  ['lammekotelet',              'lamb chops rosemary plate'],
+  ['lam',                       'lamb chops rosemary potatoes plate'],
+  ['kalvekød',                  'veal dinner plate vegetables cream'],
+  ['kalkun',                    'turkey roast plate vegetables'],
+  ['and',                       'duck breast roasted plate orange sauce'],
+  ['tofu',                      'tofu vegetables asian plate healthy'],
+  ['æg',                        'egg dish poached fried plate'],
+  // ── Generiske madtyper ────────────────────────────────────────────────────
+  ['curry',                     'curry rice coconut milk spices'],
+  ['wok',                       'stir fry wok vegetables noodles'],
+  ['gryde',                     'stew pot hearty vegetables'],
   ['suppe',                     'homemade soup bowl bread rustic'],
-  ['salat',                     'fresh salad bowl vegetables healthy'],
-  ['sandwich',                  'sandwich bread filling plate'],
-  ['toast',                     'toast sandwich melted cheese plate'],
-  ['wrap',                      'wrap tortilla filling plate fresh'],
+  ['pasta',                     'pasta dish sauce parmesan plate'],
+  ['nudler',                    'noodles broth asian bowl'],
+  ['ris',                       'rice bowl garnish vegetables plate'],
+  ['pizza',                     'homemade pizza tomato cheese basil'],
   ['tærte',                     'savory tart quiche crust plate'],
   ['quiche',                    'quiche lorraine egg cheese tart'],
-  ['pizza',                     'homemade pizza tomato cheese basil'],
-  ['gryde',                     'stew pot hearty vegetables'],
+  ['salat',                     'fresh salad bowl vegetables healthy'],
+  ['wrap',                      'wrap tortilla filling plate fresh'],
+  ['sandwich',                  'sandwich bread filling plate'],
+  ['toast',                     'toast sandwich melted cheese plate'],
   ['bøf',                       'beef steak potatoes sauce plate'],
   ['kotelet',                   'pork chop potato vegetables plate'],
   ['filet',                     'fish fillet lemon butter plate'],
   ['schnitzel',                 'schnitzel breaded veal potato salad'],
-  ['curry',                     'curry rice coconut milk spices'],
-  ['wok',                       'stir fry wok vegetables noodles'],
-  ['nudler',                    'noodles broth asian bowl'],
-  ['ris',                       'rice bowl garnish vegetables plate'],
-  ['pasta',                     'pasta dish sauce parmesan plate'],
-  ['kylling',                   'chicken dinner plate herbs vegetables'],
-  ['laks',                      'salmon fillet lemon dill plate'],
-  ['fisk',                      'fish dinner plate vegetables lemon'],
-  ['svinekød',                  'pork dish potatoes gravy plate'],
-  ['oksekød',                   'beef dish potatoes vegetables plate'],
-  ['lam',                       'lamb chops rosemary potatoes plate'],
-  ['tofu',                      'tofu vegetables asian plate healthy'],
-  ['æg',                        'egg dish plate breakfast skillet'],
+  // ── Tilberedningsmåder — allersidst ───────────────────────────────────────
+  ['grillspyd',                 'grilled skewers kebab vegetables'],
+  ['grillet',                   'grilled meat vegetables plate'],
+  ['gratin',                    'gratin baked cheese crust dish'],
+  ['ovnbagt',                   'oven baked dish vegetables herbs'],
+  ['ovnstegt',                  'roasted oven dish potatoes herbs'],
+  ['ovnret',                    'casserole baked dish oven'],
+  ['dampet',                    'steamed vegetables fish plate light'],
+  ['paneret',                   'breaded fried crispy plate'],
+  ['friturestegt',              'deep fried crispy food plate'],
 ];
 
 function getPhotoQuery(mealName) {
@@ -1472,7 +1490,7 @@ function getPhotoQuery(mealName) {
 }
 
 async function fetchMealPhoto(mealName) {
-  const key = 'mp_photo2_' + mealName.toLowerCase().replace(/[^a-z0-9æøå]/g, '_').slice(0, 60);
+  const key = 'mp_photo3_' + mealName.toLowerCase().replace(/[^a-z0-9æøå]/g, '_').slice(0, 60);
   try {
     const cached = localStorage.getItem(key);
     if (cached) {
