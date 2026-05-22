@@ -5,15 +5,11 @@
  * Rate limit: 30 kald/time pr. bruger (5 for demo-konto).
  */
 
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Strict');
-if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-    ini_set('session.cookie_secure', '1');
-}
+require_once __DIR__ . '/ratelimit.php';
+session_configure();
 session_start();
 
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/ratelimit.php';
 
 // ── Autentificering ───────────────────────────────────────────────────────────
 if (empty($_SESSION['mp_user'])) {
