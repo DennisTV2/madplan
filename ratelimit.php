@@ -1,6 +1,6 @@
 <?php
 /**
- * MadPlan — Rate limiting via temp-filer
+ * MadPlan — Rate limiting + session helpers
  * Ingen ny DB-tabel, ingen afhængigheder.
  *
  * rl_check(string $key, int $max, int $windowSecs): bool
@@ -30,6 +30,27 @@ function rl_check(string $key, int $max, int $windowSecs): bool {
     $times[] = $now;
     @file_put_contents($file, implode(',', $times), LOCK_EX);
     return true;
+}
+
+/**
+ * Konfigurer session til at vare 30 dage.
+ * Kald denne FØR session_start().
+ */
+function session_configure(): void {
+    $ttl    = 30 * 24 * 3600; // 30 dage i sekunder
+    $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+
+    ini_set('session.gc_maxlifetime',  (string)$ttl);
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Strict');
+
+    session_set_cookie_params([
+        'lifetime' => $ttl,
+        'path'     => '/',
+        'secure'   => $secure,
+        'httponly' => true,
+        'samesite' => 'Strict',
+    ]);
 }
 
 /**

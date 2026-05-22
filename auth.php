@@ -7,16 +7,11 @@
  * POST {"action":"logout"}    → log ud
  */
 
-// Sikre session-cookies
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Strict');
-if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-    ini_set('session.cookie_secure', '1');
-}
+require_once __DIR__ . '/ratelimit.php';
+session_configure();
 session_start();
 
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/ratelimit.php';
 
 header('Content-Type: application/json; charset=utf-8');
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
@@ -48,6 +43,9 @@ function getDB(): PDO {
 // ── GET: tjek session ──────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (($_GET['action'] ?? '') === 'check') {
+        if (!empty($_SESSION['mp_user'])) {
+            $_SESSION['mp_last_active'] = time(); // forny aktivitetstidspunkt
+        }
         echo json_encode(['user' => $_SESSION['mp_user'] ?? null]);
     }
     exit;

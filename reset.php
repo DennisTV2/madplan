@@ -5,15 +5,11 @@
  * POST {"action":"reset","token":"...","password":"..."} → sæt nyt kodeord
  */
 
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Strict');
-if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-    ini_set('session.cookie_secure', '1');
-}
+require_once __DIR__ . '/ratelimit.php';
+session_configure();
 session_start();
 
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/ratelimit.php';
 
 header('Content-Type: application/json; charset=utf-8');
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
@@ -97,15 +93,22 @@ if ($action === 'request') {
 </div>
 </body></html>';
 
-            $headers  = implode("\r\n", [
+            $msgId   = '<' . bin2hex(random_bytes(16)) . '@birkeboeg.dk>';
+            $headers = implode("\r\n", [
                 'From: MadPlan <noreply@birkeboeg.dk>',
                 'Reply-To: noreply@birkeboeg.dk',
+                'Return-Path: noreply@birkeboeg.dk',
                 'MIME-Version: 1.0',
                 'Content-Type: text/html; charset=utf-8',
+                'Content-Transfer-Encoding: quoted-printable',
+                'Message-ID: ' . $msgId,
+                'Date: ' . date('r'),
                 'X-Mailer: MadPlan/1.0',
+                'X-Priority: 3',
             ]);
 
-            mail($email, $subject, $htmlBody, $headers);
+            // -f sætter envelope-From korrekt (reducerer spam-score)
+            mail($email, '=?UTF-8?B?' . base64_encode($subject) . '?=', $htmlBody, $headers, '-f noreply@birkeboeg.dk');
         }
     } catch (Exception $e) {
         // Log fejl uden at afsløre for brugeren
