@@ -370,6 +370,28 @@ async function checkSession() {
 // Kør session-check når DOM er klar
 document.addEventListener('DOMContentLoaded', checkSession);
 
+// ─── NATIVE FEEL ──────────────────────────────────────────────────────────────
+
+// Haptic feedback via Vibration API (virker på Android, ignoreres på iOS)
+function haptic(ms = 8) {
+  navigator.vibrate?.(ms);
+}
+
+// Global tap-haptics på alle interaktive elementer — ingen ændringer i HTML
+document.addEventListener('touchstart', (e) => {
+  if (e.target.closest(
+    'button, .nav-item, .shop-card, .day-card, .recipe-card, ' +
+    '.gen-btn, .swap-btn, .action-btn, .auth-tab, .rd-persons-btn'
+  )) haptic();
+}, { passive: true });
+
+// Forhindre overscroll/bounce på selve dokumentet (ekstra sikring)
+document.addEventListener('touchmove', (e) => {
+  if (e.target === document.body || e.target === document.documentElement) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
 function enterApp() {
   document.getElementById('splash-screen')?.remove();
   document.getElementById('auth-screen').style.display = 'none';
