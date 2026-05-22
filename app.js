@@ -392,7 +392,7 @@ document.addEventListener('touchmove', (e) => {
   }
 }, { passive: false });
 
-function enterApp() {
+async function enterApp() {
   document.getElementById('splash-screen')?.remove();
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-screen').style.display  = '';
@@ -413,7 +413,8 @@ function enterApp() {
   if (def.days)    document.getElementById('default-days').value    = def.days;
   if (def.persons) document.getElementById('default-persons').value = def.persons;
 
-  loadHistory();
+  // loadHistory: lokal kopi vises straks, server-sync sker i baggrunden
+  loadHistory(); // starter fetch — ikke await, lad UI vise straks
   updateStats();
   renderOffersRow();
   showPage('plan');
@@ -543,12 +544,13 @@ function saveDefaults() {
   localStorage.setItem('mp_defaults_' + currentUser.email, JSON.stringify(def));
 }
 
-function clearHistory() {
+async function clearHistory() {
   if (!confirm('Er du sikker på du vil slette al historik?')) return;
   history = history.filter(h => h.user !== currentUser.email);
   localStorage.setItem('mp_history', JSON.stringify(history));
   renderHistory();
   updateStats();
+  try { await fetch('history.php', { method: 'DELETE' }); } catch { /* ignorér netværksfejl */ }
 }
 
 // ─── GATHER SETTINGS ──────────────────────────────────────────────────────────
@@ -1206,7 +1208,7 @@ window.exportShoppingList = exportShoppingList;
 
 // ─── HISTORY ──────────────────────────────────────────────────────────────────
 
-function savePlanToHistory(plan, settings) {
+async function savePlanToHistory(plan, settings) {
   if (!currentUser) return;
   const entry = {
     id:      Date.now(),
@@ -1222,14 +1224,69 @@ function savePlanToHistory(plan, settings) {
     summary: plan.summary,
     plan:    plan,
   };
+  // Opdater lokalt med det samme (optimistisk UI)
   history.unshift(entry);
   if (history.length > 50) history = history.slice(0, 50);
   localStorage.setItem('mp_history', JSON.stringify(history));
   updateDishCatalog(plan);
+
+  // Gem asynkront på server
+  try {
+    await fetch('history.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        plan:    plan,
+        shops:   settings.shops,
+        days:    settings.days,
+        persons: settings.persons,
+        tags:    settings.dietTags,
+        opt:     settings.optimizeMode,
+        total:   plan.total_price,
+        savings: plan.savings,
+        summary: plan.summary,
+      }),
+    });
+  } catch { /* Netværksfejl — lokal kopi er stadig gemt */ }
 }
 
-function loadHistory() {
+async function loadHistory() {
+  // Indlæs lokal kopi med det samme (hurtig visning)
   history = JSON.parse(localStorage.getItem('mp_history') || '[]');
+
+  // Prøv at hente fra server og merge
+  try {
+    const res = await fetch('history.php');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!Array.isArray(data.plans) || !data.plans.length) return;
+
+    // Konvertér server-format til app-format og merge med lokal historik
+    const serverEntries = data.plans.map(p => ({
+      id:      p.id,
+      user:    currentUser.email,
+      date:    new Date(p.created_at).toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' }),
+      days:    p.days,
+      persons: p.persons,
+      shops:   (p.shops || '').split(',').filter(Boolean),
+      total:   p.total,
+      savings: p.savings,
+      tags:    (p.tags || '').split(',').filter(Boolean),
+      opt:     p.opt,
+      summary: p.summary,
+      plan:    p.plan,
+    }));
+
+    // Server er kilde til sandhed — erstat lokal historik for denne bruger
+    history = [
+      ...serverEntries,
+      ...history.filter(h => h.user !== currentUser.email), // historik fra andre brugere (delt enhed)
+    ];
+    history.slice(0, 50);
+    localStorage.setItem('mp_history', JSON.stringify(history));
+    renderHistory();
+    updateStats();
+  } catch { /* Netværksfejl — vis lokal historik */ }
 }
 
 function renderHistory() {
@@ -1961,7 +2018,7 @@ function renderSavedRecipesSection() {
     <div class="saved-section-label">⭐ Mine gemte retter</div>
     <div class="recipe-grid">${filtered.map(m => `
       <div class="recipe-card saved-recipe-card" onclick="showRecipeDetail(null,'${m.name.replace(/'/g,"\\'")}')">
-        <div class="recipe-card-photo-placeholder">⭐</div>
+        ${recipePhotoHtml(RECIPES.find(r=>r.name===m.name)||null,'⭐')}
         <div class="recipe-card-body">
           <div class="recipe-card-name">${m.name}</div>
           ${m.description ? `<div class="recipe-card-meta">${m.description.slice(0, 60)}${m.description.length > 60 ? '…' : ''}</div>` : ''}
@@ -2003,7 +2060,7 @@ function renderRecipeGrid() {
   }
   container.innerHTML = `<div class="recipe-grid">${filtered.map(r => `
     <div class="recipe-card" onclick="showRecipeDetail('${r.id}')">
-      <div class="recipe-card-photo-placeholder">${getCategoryEmoji(r.category)}</div>
+      ${recipePhotoHtml(r, getCategoryEmoji(r.category))}
       <div class="recipe-card-body">
         <div class="recipe-card-name">${r.name}</div>
         <div class="recipe-card-tags">${r.tags.slice(0, 2).map(t => `<span class="cat-chip">${t}</span>`).join('')}</div>
@@ -2166,6 +2223,29 @@ function catDanish(cat) {
 function getCategoryEmoji(category) {
   const map = { klassisk: '🥘', kød: '🥩', internationalt: '🌍', pasta: '🍝', vegetar: '🥗', fisk: '🐟' };
   return map[category] || '🍽️';
+}
+
+// ─── RECIPE PHOTOS (Unsplash CDN — ingen API-nøgle nødvendig) ─────────────────
+const CATEGORY_PHOTO_POOL = {
+  klassisk:      ['1547592166-23ac45744acd','1574484284002-91d788b57bc6','1631515687347-4ec7bb79f2b9'],
+  kød:           ['1504674900247-0877df9cc836','1558030006-b6e0e1f67f3e','1603048588-18eff39220f4'],
+  pasta:         ['1551183053-bf91798d395d','1473093295043-ccedbae4eae','1621996346565-ead05ef34d78'],
+  vegetar:       ['1512621776951-a57141f2eefd','1540420773420-8b8e8d019375','1543362906-acfc16c67564'],
+  fisk:          ['1519708227418-1d7e627a5a6e','1565688534693-4b4dcaab8e24','1559847844-5315695dadae'],
+  internationalt:['1565557623262-b51c2513a641','1603360946369-dc9bb6258143','1534422298391-e4f8c172dddb'],
+};
+
+function recipePhotoHtml(recipe, emoji) {
+  const pool = recipe?.category ? (CATEGORY_PHOTO_POOL[recipe.category] || []) : [];
+  if (!pool.length) return `<div class="recipe-card-photo-placeholder">${emoji}</div>`;
+  // Deterministisk valg baseret på recipe ID — samme ret = samme billede
+  const s = recipe.id || recipe.name || '';
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = Math.imul((h << 5) + h, 1) + s.charCodeAt(i) | 0;
+  const photoId = pool[Math.abs(h) % pool.length];
+  const url = `https://images.unsplash.com/photo-${photoId}?auto=format&fit=crop&w=144&q=65`;
+  const esc  = emoji.replace(/'/g, "\\'");
+  return `<img class="recipe-card-photo" src="${url}" loading="lazy" alt="" onerror="this.outerHTML='<div class=\\"recipe-card-photo-placeholder\\">${esc}</div>'">`;
 }
 
 // ─── SAVED MEALS / FAVORITES ─────────────────────────────────────────────────

@@ -88,7 +88,7 @@ if ($action === 'login') {
     }
 
     try {
-        $stmt = getDB()->prepare('SELECT name, email, password_hash FROM users WHERE email = ? LIMIT 1');
+        $stmt = getDB()->prepare('SELECT id, name, email, password_hash FROM users WHERE email = ? LIMIT 1');
         $stmt->execute([$email]);
         $row = $stmt->fetch();
 
@@ -98,7 +98,7 @@ if ($action === 'login') {
             exit;
         }
 
-        $_SESSION['mp_user'] = ['name' => $row['name'], 'email' => $row['email']];
+        $_SESSION['mp_user'] = ['id' => (int)$row['id'], 'name' => $row['name'], 'email' => $row['email']];
         echo json_encode(['user' => $_SESSION['mp_user']]);
 
     } catch (Exception $e) {
@@ -155,8 +155,9 @@ if ($action === 'register') {
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
         $stmt = getDB()->prepare('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)');
         $stmt->execute([$name, $email, $hash]);
+        $newId = (int)getDB()->lastInsertId();
 
-        $_SESSION['mp_user'] = ['name' => $name, 'email' => $email];
+        $_SESSION['mp_user'] = ['id' => $newId, 'name' => $name, 'email' => $email];
         echo json_encode(['user' => $_SESSION['mp_user']]);
 
     } catch (Exception $e) {
