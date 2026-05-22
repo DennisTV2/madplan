@@ -1281,8 +1281,7 @@ async function loadHistory() {
     history = [
       ...serverEntries,
       ...history.filter(h => h.user !== currentUser.email), // historik fra andre brugere (delt enhed)
-    ];
-    history.slice(0, 50);
+    ].slice(0, 50);
     localStorage.setItem('mp_history', JSON.stringify(history));
     renderHistory();
     updateStats();
