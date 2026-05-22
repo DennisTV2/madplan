@@ -99,7 +99,12 @@
   --nav-h: 68px;
 }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  height: 100%;
+  /* Ingen bounce/gummi på iOS */
+  overscroll-behavior: none;
+}
 
 body {
   font-family: var(--font);
@@ -108,8 +113,19 @@ body {
   font-size: 15px;
   line-height: 1.55;
   min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport height på mobile */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+  /* Fjern grå flash ved tap på iOS */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Fjern 300ms tap-delay + double-tap-zoom på alle interaktive elementer */
+button, a, [role="button"],
+.nav-item, .day-card, .shop-card, .recipe-card,
+.auth-tab, .gen-btn, .swap-btn, .action-btn {
+  touch-action: manipulation;
 }
 
 /* ═══════════════════
@@ -121,7 +137,8 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 2rem 1.5rem;
+  min-height: 100dvh;
+  padding: calc(2rem + env(safe-area-inset-top, 0px)) 1.5rem calc(2rem + env(safe-area-inset-bottom, 0px));
   background: var(--bg);
 }
 
@@ -314,8 +331,10 @@ select {
 .layout {
   max-width: 520px;
   margin: 0 auto;
-  padding-bottom: calc(var(--nav-h) + 1rem);
+  /* Undgå at indhold gemmer sig bag bottom nav + home bar */
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 1rem);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Hide old sidebar */
@@ -327,15 +346,35 @@ select {
 }
 
 .page { display: none; }
-.page.active { display: block; }
+.page.active {
+  display: block;
+  animation: pageIn 0.18s ease;
+}
 
-/* ── Top bar ── */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Press-feedback (native feel) ── */
+.btn-primary:active        { transform: scale(0.97); transition: transform 0.08s; }
+.nav-item:active           { opacity: 0.55; transform: scale(0.88); transition: transform 0.08s, opacity 0.08s; }
+.shop-card:active          { transform: scale(0.95); transition: transform 0.08s; }
+.day-card:active           { transform: scale(0.98); transition: transform 0.08s; }
+.recipe-card:active        { transform: scale(0.97); transition: transform 0.08s; }
+.action-btn:active         { transform: scale(0.92); transition: transform 0.08s; }
+.gen-btn:active            { transform: scale(0.97); transition: transform 0.08s; }
+.swap-btn:active           { transform: scale(0.93); transition: transform 0.08s; }
+.auth-tab:active           { transform: scale(0.95); transition: transform 0.08s; }
+
+/* ── Top bar — udvides ind i status bar (safe area) ── */
 .top-bar {
   position: sticky;
   top: 0;
   z-index: 50;
   background: var(--bg);
-  padding: 1rem 1rem 0.75rem;
+  /* Skyder indhold ned under status bar (notch/Dynamic Island) */
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem 0.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -364,15 +403,16 @@ select {
   cursor: pointer;
 }
 
-/* ── Bottom nav ── */
+/* ── Bottom nav — udvides ind i home bar (safe area) ── */
 .bottom-nav {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  height: var(--nav-h);
+  /* Højde: nav + home bar på iPhone */
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
   background: white;
   border-top: 1px solid var(--border);
   display: flex;
-  align-items: stretch;
+  align-items: flex-start; /* items øverst, home bar er luft nedenunder */
   justify-content: space-around;
   z-index: 200;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
