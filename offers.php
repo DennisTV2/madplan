@@ -10,13 +10,7 @@ session_configure();
 session_start();
 
 header('Content-Type: application/json; charset=utf-8');
-
-// CORS — tillad kun samme origin
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if ($origin) {
-    header('Access-Control-Allow-Origin: ' . $origin);
-    header('Vary: Origin');
-}
+cors_send();
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
@@ -63,13 +57,19 @@ if (empty($shops)) {
 // ── Server-side cache (2 timer) ───────────────────────────────────────────────
 $cacheKey  = md5('v3_' . implode(',', $shops));
 $cacheFile = sys_get_temp_dir() . '/mpoffers_' . $cacheKey . '.json';
-if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 7200) {
-    $cached = @file_get_contents($cacheFile);
-    if ($cached !== false) {
-        header('X-Cache: HIT');
-        echo $cached;
-        exit;
-    }
+if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 7200 && filesize($cacheFile) > 10) {
+    // Læs med shared lock — undgår partial-read fra concurrent skrivning
+    $fh = @fopen($cacheFile, 'r');
+    if ($fh && flock($fh, LOCK_SH)) {
+        $cached = stream_get_contents($fh);
+        flock($fh, LOCK_UN);
+        fclose($fh);
+        if ($cached !== false && $cached !== '') {
+            header('X-Cache: HIT');
+            echo $cached;
+            exit;
+        }
+    } elseif ($fh) { fclose($fh); }
 }
 
 // ── Hent tilbud per butik ─────────────────────────────────────────────────────
@@ -143,6 +143,10 @@ $result = [
 ];
 $json = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-@file_put_contents($cacheFile, $json, LOCK_EX);
+// Atomisk skrivning: skriv til temp-fil, rename — undgår partial-read
+$tmpFile = $cacheFile . '.tmp.' . getmypid();
+if (@file_put_contents($tmpFile, $json, LOCK_EX) !== false) {
+    @rename($tmpFile, $cacheFile);
+}
 header('X-Cache: MISS');
 echo $json;

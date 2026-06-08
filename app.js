@@ -1872,14 +1872,15 @@ function scoreRecipesAgainstOffers(shops, dietTags = []) {
   return pool
     .map(r => {
       const matched = r.ingredients.filter(ing => offerText.includes(ing.toLowerCase()));
+      if (!matched.length) return null; // ingen tilbudsmatch → altid ekskluder
       // Sæsonboost: +0.5 pr. sæsonvare i ingredienslisten
       const recipeText = (r.name + ' ' + r.ingredients.join(' ')).toLowerCase();
       const seasonBoost = seasonalIngs.filter(ing => recipeText.includes(ing)).length * 0.5;
-      // Anti-sæson straf: -2 hvis retten bruger "forbudte" råvarer for sæsonen
-      const antiPenalty = season.anti.some(ing => recipeText.includes(ing)) ? -2 : 0;
+      // Anti-sæson straf: rykker NED i ranking men kasseres ikke (har stadig tilbudsmatch)
+      const antiPenalty = season.anti.some(ing => recipeText.includes(ing)) ? -1.5 : 0;
       return { ...r, score: matched.length + seasonBoost + antiPenalty, matched };
     })
-    .filter(r => r.score > 0)
+    .filter(Boolean)
     .sort((a, b) => b.score - a.score);
 }
 
