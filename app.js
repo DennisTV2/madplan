@@ -581,25 +581,83 @@ function gatherSettings() {
 
 // ─── SEASONAL & WEEKDAY HELPERS ──────────────────────────────────────────────
 
-function getSeasonalHint() {
+const SEASON_DATA = {
+  vinter: {
+    months: [12, 1, 2],
+    label: 'Vinter',
+    pro:   ['rodfrugter', 'kål', 'porre', 'persillerod', 'selleri', 'pastinak', 'rødkål', 'savoykål', 'grønkål'],
+    anti:  [],
+    style: 'Solide varme retter — braiseret kød, tykke supper, gryder og ovnretter. Kål og rodfrugter er i sæson.',
+    avoid: '',
+    examples: 'Oksegryde, flæskesteg med rødkål, kartoffelsuppe, krebinetter med stuvet spidskål, grønkålspasta',
+  },
+  forår: {
+    months: [3, 4, 5],
+    label: 'Forår',
+    pro:   ['asparges', 'spinat', 'radiser', 'ærter', 'ramsløg', 'nye kartofler', 'rejer', 'forårsløg', 'rabarbr'],
+    anti:  ['rødkål'],
+    style: 'Lette forårsretter med friske grøntsager. Undgå tunge vintergryder.',
+    avoid: 'Brug IKKE rødkål, tunge kålgryder eller rodfrugtssupper — vintersæsonen er forbi for disse.',
+    examples: 'Asparges med hollandaise, spinatpasta, nye kartofler med rejer, tarteletfyld med høns og asparges',
+  },
+  sommer: {
+    months: [6, 7, 8],
+    label: 'Sommer',
+    pro:   ['tomater', 'agurk', 'courgette', 'squash', 'salat', 'ærter', 'bønner', 'majs', 'basilikum', 'fennikel', 'radiser', 'peberfrugt', 'jordbær', 'blåbær'],
+    anti:  ['rødkål', 'grønkål', 'pastinak', 'selleri', 'porre'],
+    style: 'Lette sommerretter: pastasalater, grillretter, kolde retter, friske tomatsaucer, hurtige sautéer.',
+    avoid: '🚫 FORBUDT om sommeren: rødkålssuppe, tung kålgryde, kartoffelsuppe med porre, grønkålspasta som eneste slags grøntsagsret. Disse hører til i vinter/efterår.',
+    examples: 'Pasta med friske tomater og basilikum, grillkylling med tomatsalsa, pandestegt laks med agurksalat, wok med courgette og bønner, kyllingesalat med mango',
+  },
+  efterår: {
+    months: [9, 10, 11],
+    label: 'Efterår',
+    pro:   ['svampe', 'græskar', 'rødbeder', 'æbler', 'pærer', 'spidskål', 'porre', 'blomkål', 'broccoli'],
+    anti:  [],
+    style: 'Varme efterårsretter med svampe, rodfrugter og efterårsgrøntsager. Ovnretter og gryder passer perfekt.',
+    avoid: 'Undgå lette kolde sommerretter som primær ret — sæsonen kalder på varme og fyldige smage.',
+    examples: 'Svamperisotto, græskarsuppe, efterårsgryde med kyllingelår, ovnbagt blomkål, æblefyldt svinekotelet',
+  },
+};
+
+function getCurrentSeason() {
   const m = new Date().getMonth() + 1;
-  const map = {
-    1:  ['porre', 'rodfrugter', 'kål', 'persillerod', 'selleri'],
-    2:  ['porre', 'rodfrugter', 'kål', 'citrus', 'radicchio'],
-    3:  ['asparges', 'radiser', 'spinat', 'ærter'],
-    4:  ['asparges', 'radiser', 'spinat', 'ærter', 'nye kartofler'],
-    5:  ['asparges', 'jordbær', 'rabarbr', 'radiser', 'spinat', 'ærter'],
-    6:  ['jordbær', 'ærter', 'nye kartofler', 'courgette', 'salat', 'agurk'],
-    7:  ['tomater', 'courgette', 'bønner', 'agurk', 'salat', 'blåbær'],
-    8:  ['tomater', 'courgette', 'peberfrugt', 'bønner', 'blommer'],
-    9:  ['svampe', 'æbler', 'pærer', 'squash', 'porre', 'blomkål'],
-    10: ['svampe', 'æbler', 'rødbeder', 'kål', 'græskar', 'porre'],
-    11: ['rodfrugter', 'kål', 'rødkål', 'persillerod', 'selleri'],
-    12: ['rødkål', 'rodfrugter', 'appelsin', 'klementin', 'porre'],
-  };
-  const items = map[m] || [];
-  const season = m >= 3 && m <= 5 ? 'Forår' : m >= 6 && m <= 8 ? 'Sommer' : m >= 9 && m <= 11 ? 'Efterår' : 'Vinter';
-  return items.length ? `• SÆSON (${season} i Danmark): Prioritér gerne disse råvarer i min. 2 retter: ${items.join(', ')}` : '';
+  return Object.values(SEASON_DATA).find(s => s.months.includes(m)) || SEASON_DATA.vinter;
+}
+
+function getSeasonalIngredients() {
+  return getCurrentSeason().pro;
+}
+
+function getSeasonalHint() {
+  const s = getCurrentSeason();
+  const minRetter = s.label === 'Sommer' ? 3 : 2;
+  const lines = [
+    `• SÆSON: ${s.label.toUpperCase()} I DANMARK — OBLIGATORISK:`,
+    `  Brug disse sæsonråvarer aktivt i mindst ${minRetter} retter: ${s.pro.join(', ')}`,
+    `  Madstil om ${s.label.toLowerCase()}: ${s.style}`,
+  ];
+  if (s.avoid) lines.push(`  ${s.avoid}`);
+  lines.push(`  Gode ${s.label.toLowerCase()}sretter: ${s.examples}`);
+  return lines.join('\n');
+}
+
+// Sæson × tilbud — dobbeltgevinst: tilbudsvarer der OGSÅ er sæsonvarer
+function getSeasonOffersCrossRef(shops) {
+  const seasonPro = getSeasonalIngredients();
+  const offerItems = realOffers?.grouped
+    ? shops.flatMap(id => (realOffers.grouped[id] || []).map(o => ({ shop: id, heading: o.heading, price: o.price })))
+    : [];
+  const matches = offerItems.filter(o =>
+    seasonPro.some(ing => o.heading.toLowerCase().includes(ing))
+  ).slice(0, 6);
+  if (!matches.length) return '';
+  const shopName = id => STORE_OFFERS[id]?.name || id;
+  return `• DOBBELT GEVINST — disse tilbud er OGSÅ sæsonvarer lige nu:\n` +
+    matches.map(o =>
+      `  ★ ${o.heading}${o.price != null ? ' (' + o.price + ' kr)' : ''} hos ${shopName(o.shop)}`
+    ).join('\n') +
+    '\n  → Disse bør indgå i mindst én ret da de er både billige og i sæson.';
 }
 
 function getWeekdayHint(numDays) {
@@ -903,6 +961,7 @@ ${includeRules ? '• SKAL indgå i planen: ' + includeRules : ''}
 ${excludeRules ? '• MÅ ALDRIG bruges – allergi/fravalg: ' + excludeRules : ''}
 ${recentMeals.length ? '• UNDGÅ disse retter – brugt de seneste uger: ' + recentMeals.slice(0, 14).join(', ') : ''}
 ${getSeasonalHint()}
+${getSeasonOffersCrossRef(settings.shops)}
 ${getWeekdayHint(settings.days)}
 • VARIATIONSREGEL: Ingen ret gentages i denne plan. Brug max 1 pastabaseret ret og max 2 retter med samme protein. Varier køkken: dansk / italiensk / asiatisk / mexicansk / mellemøstligt.
 • BUTIKSBEGRÆNSNING: Brug KUN produkter og tilbud fra: ${selectedShopNames.join(', ')} – ignorer alle andre butikker i dine svar.
@@ -1806,10 +1865,19 @@ function scoreRecipesAgainstOffers(shops, dietTags = []) {
     pool = pool.filter(r => requiredDiets.every(d => (r.dietary || []).includes(d)));
   }
 
+  // Sæsonboost: opskrifter med sæsonråvarer rykker op
+  const seasonalIngs = getSeasonalIngredients();
+  const season = getCurrentSeason();
+
   return pool
     .map(r => {
       const matched = r.ingredients.filter(ing => offerText.includes(ing.toLowerCase()));
-      return { ...r, score: matched.length, matched };
+      // Sæsonboost: +0.5 pr. sæsonvare i ingredienslisten
+      const recipeText = (r.name + ' ' + r.ingredients.join(' ')).toLowerCase();
+      const seasonBoost = seasonalIngs.filter(ing => recipeText.includes(ing)).length * 0.5;
+      // Anti-sæson straf: -2 hvis retten bruger "forbudte" råvarer for sæsonen
+      const antiPenalty = season.anti.some(ing => recipeText.includes(ing)) ? -2 : 0;
+      return { ...r, score: matched.length + seasonBoost + antiPenalty, matched };
     })
     .filter(r => r.score > 0)
     .sort((a, b) => b.score - a.score);
