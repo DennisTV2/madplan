@@ -11,8 +11,7 @@ session_configure();
 session_start();
 
 header('Content-Type: application/json; charset=utf-8');
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if ($origin) { header('Access-Control-Allow-Origin: ' . $origin); header('Vary: Origin'); }
+cors_send();
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -94,7 +93,15 @@ if ($method === 'POST') {
         exit;
     }
 
-    $body = json_decode(file_get_contents('php://input'), true);
+    // Begræns POST-body til 200 KB (en madplan er typisk < 20 KB)
+    $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    if ($contentLength > 204800) {
+        http_response_code(413);
+        echo json_encode(['error' => 'Plan-data for stor (maks 200 KB)']);
+        exit;
+    }
+    $raw  = stream_get_contents(fopen('php://input', 'r'), 204800);
+    $body = json_decode($raw ?: '{}', true);
     if (empty($body['plan'])) {
         http_response_code(400);
         echo json_encode(['error' => 'Mangler plan-data']);
@@ -103,14 +110,22 @@ if ($method === 'POST') {
 
     try {
         ensureTable();
-        $db = getDB();
+        $db        = getDB();
+        $planJson  = json_encode($body['plan'], JSON_UNESCAPED_UNICODE);
+
+        // Dobbeltsikring: plan_json må ikke overstige MEDIUMTEXT (16 MB)
+        if (strlen($planJson) > 1_000_000) {
+            http_response_code(413);
+            echo json_encode(['error' => 'Plan-data for stor']);
+            exit;
+        }
+
         $stmt = $db->prepare(
             'INSERT INTO mp_plans (user_email, plan_json, shops, days, persons, tags, opt, total, savings, summary)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
-            $userEmail,
-            json_encode($body['plan'], JSON_UNESCAPED_UNICODE),
+            $userEmail, $planJson,
             implode(',', (array)($body['shops']   ?? [])),
             (int)   ($body['days']    ?? 0),
             (int)   ($body['persons'] ?? 0),
@@ -122,11 +137,17 @@ if ($method === 'POST') {
         ]);
         $newId = (int)$db->lastInsertId();
 
-        // Behold maks 50 planer pr. bruger — ryd ældste
-        $db->prepare(
-            'DELETE FROM mp_plans WHERE user_email = ?
-             AND id NOT IN (SELECT id FROM (SELECT id FROM mp_plans WHERE user_email = ? ORDER BY created_at DESC LIMIT 50) t)'
-        )->execute([$userEmail, $userEmail]);
+        // Behold maks 50 planer pr. bruger — hent og slet ældste eksplicit
+        // (undgår MySQL-fejl med self-referentielle subqueries)
+        $old = $db->prepare(
+            'SELECT id FROM mp_plans WHERE user_email = ? ORDER BY created_at DESC LIMIT 1000 OFFSET 50'
+        );
+        $old->execute([$userEmail]);
+        $oldIds = $old->fetchAll(PDO::FETCH_COLUMN);
+        if ($oldIds) {
+            $ph = implode(',', array_fill(0, count($oldIds), '?'));
+            $db->prepare("DELETE FROM mp_plans WHERE id IN ($ph)")->execute($oldIds);
+        }
 
         echo json_encode(['ok' => true, 'id' => $newId]);
     } catch (Exception $e) {

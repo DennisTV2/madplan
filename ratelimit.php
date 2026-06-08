@@ -33,6 +33,28 @@ function rl_check(string $key, int $max, int $windowSecs): bool {
 }
 
 /**
+ * Sætter CORS-header — kun hvis origin matcher APP_ORIGIN (config.php).
+ * Reflekterer ALDRIG blinde origins (sikkerhedsregel).
+ * Kald denne inden output sendes.
+ */
+function cors_send(): void {
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if (!$origin) return;
+
+    // APP_ORIGIN kan sættes i config.php som én streng eller kommasepareret liste
+    $allowed = defined('APP_ORIGIN')
+        ? array_map('trim', explode(',', APP_ORIGIN))
+        : [];
+
+    if (in_array($origin, $allowed, true)) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Access-Control-Allow-Credentials: true');
+        header('Vary: Origin');
+    }
+    // Ukendt origin → ingen CORS-header → browseren afviser cross-origin request
+}
+
+/**
  * Konfigurer session til at vare 30 dage.
  * Kald denne FØR session_start().
  */

@@ -14,8 +14,7 @@ session_start();
 require_once __DIR__ . '/config.php';
 
 header('Content-Type: application/json; charset=utf-8');
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if ($origin) { header('Access-Control-Allow-Origin: ' . $origin); header('Vary: Origin'); }
+cors_send();
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
@@ -98,6 +97,7 @@ if ($action === 'login') {
             exit;
         }
 
+        session_regenerate_id(true); // Forhindr session fixation
         $_SESSION['mp_user'] = ['id' => (int)$row['id'], 'name' => $row['name'], 'email' => $row['email']];
         echo json_encode(['user' => $_SESSION['mp_user']]);
 
@@ -157,6 +157,7 @@ if ($action === 'register') {
         $stmt->execute([$name, $email, $hash]);
         $newId = (int)getDB()->lastInsertId();
 
+        session_regenerate_id(true); // Forhindr session fixation
         $_SESSION['mp_user'] = ['id' => $newId, 'name' => $name, 'email' => $email];
         echo json_encode(['user' => $_SESSION['mp_user']]);
 
