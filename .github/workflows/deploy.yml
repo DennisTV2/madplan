@@ -29,6 +29,17 @@ jobs:
             **/.git*/**
             **/node_modules/**
             README.md
+            **/.claude/**
+            files/**
+            files.zip
+            madplan/**
+            madplan_app.html
+            git
+            node_modules/**
+            server.js
+            package.json
+            package-lock.json
+            .env.example
 
       - name: ✅ Deploy fuldført
         run: echo "MadPlan er live på madplan.birkebøg.dk 🌿"

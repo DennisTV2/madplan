@@ -2,101 +2,175 @@
    MADPLAN — Nordic Precision Design System
    ═══════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+
 :root {
-  /* ── Primary ── */
-  --primary:        #22C55E;
-  --primary-dark:   #16A34A;
-  --primary-darker: #15803D;
-  --primary-bg:     #F0FDF4;
-  --primary-border: #BBF7D0;
+  color-scheme: light dark;
 
-  /* ── Neutrals ── */
-  --slate-900: #0F172A;
-  --slate-800: #1E293B;
-  --slate-700: #334155;
-  --slate-600: #475569;
-  --slate-500: #64748B;
-  --slate-400: #94A3B8;
-  --slate-300: #CBD5E1;
-  --slate-200: #E2E8F0;
-  --slate-100: #F1F5F9;
-  --slate-50:  #F8FAFC;
+  /* ── Primary: mos/fyrrenål — den ENESTE accentfarve ── */
+  --primary:        #2F5E3A;
+  --primary-dark:   #244B2E;
+  --primary-darker: #1B3A23;
+  --primary-bg:     #E6EDE1;
+  --primary-border: #C3D3BA;
+  --on-primary:     #FBFAF5;
 
-  /* ── Semantic colours (kept for JS compatibility) ── */
-  --moss-50:   #F0FDF4;
-  --moss-100:  #DCFCE7;
-  --moss-200:  #BBF7D0;
-  --moss-700:  #15803D;
-  --moss-800:  #166534;
-  --moss-900:  #14532D;
-  --rye-50:    #FFFBEB;
-  --rye-100:   #FEF3C7;
-  --rye-800:   #92400E;
-  --fjord-50:  #F0FDFA;
-  --fjord-100: #CCFBF1;
-  --fjord-800: #115E59;
-  --stone-100: #F1F5F9;
-  --stone-200: #E2E8F0;
-  --stone-800: #1E293B;
-  --berry-50:  #FEF2F2;
-  --berry-100: #FEE2E2;
-  --berry-400: #F87171;
-  --berry-600: #DC2626;
-  --berry-800: #991B1B;
-  --amber-50:  #FFFBEB;
-  --amber-100: #FEF3C7;
-  --amber-600: #D97706;
-  --amber-800: #92400E;
-  --teal-50:   #F0FDFA;
-  --teal-100:  #CCFBF1;
-  --teal-600:  #0D9488;
-  --teal-800:  #115E59;
-  --coral-400: #FB923C;
-  --coral-600: #EA580C;
+  /* ── Varme neutraler (birk/sten) — én grå-familie ── */
+  --slate-900: #1E261D;
+  --slate-800: #2B3328;
+  --slate-700: #434A3F;
+  --slate-600: #5C6157;
+  --slate-500: #777B70;
+  --slate-400: #9A9C91;
+  --slate-300: #C3C0B4;
+  --slate-200: #DDD8CC;
+  --slate-100: #EBE6DB;
+  --slate-50:  #F6F3EB;
+
+  /* ── Semantiske farver (navne bevaret pga. app.js) ── */
+  --moss-50:   #E6EDE1;
+  --moss-100:  #D5E1CE;
+  --moss-200:  #C3D3BA;
+  --moss-700:  #2F5E3A;
+  --moss-800:  #244B2E;
+  --moss-900:  #1B3A23;
+  /* Tilbud = rug/ravgul */
+  --rye-50:    #F5ECDC;
+  --rye-100:   #EBDBBE;
+  --rye-800:   #7A4E12;
+  --amber-50:  #F5ECDC;
+  --amber-100: #EBDBBE;
+  --amber-600: #9A6418;
+  --amber-800: #6E460F;
+  /* Besparelse/tips = mos-tone (ingen ekstra accent) */
+  --fjord-50:  #E6EDE1;
+  --fjord-100: #D5E1CE;
+  --fjord-800: #244B2E;
+  --teal-50:   #E6EDE1;
+  --teal-100:  #D5E1CE;
+  --teal-200:  #A9BF9C;
+  --teal-600:  #3D6B47;
+  --teal-800:  #244B2E;
+  --stone-100: #EBE6DB;
+  --stone-200: #DDD8CC;
+  --stone-800: #2B3328;
+  /* Fejl = tyttebær */
+  --berry-50:  #F5E4DE;
+  --berry-100: #EBCBC1;
+  --berry-400: #C2604C;
+  --berry-600: #9C3A28;
+  --berry-800: #6E2619;
+  /* Børn = ler/terrakotta */
+  --coral-400: #C27650;
+  --coral-600: #9E5230;
+  --clay-50:   #F5E7DD;
+  --clay-100:  #EBD0BE;
+  --clay-800:  #6E3418;
 
   /* ── App tokens ── */
-  --bg:            #EFEFEB;
-  --card:          #FFFFFF;
-  --border:        rgba(0,0,0,0.07);
-  --border-hover:  rgba(0,0,0,0.14);
-  --border-strong: rgba(0,0,0,0.18);
+  --bg:            #F3EFE6;
+  --card:          #FCFBF7;
+  --surface:       #F6F3EB;
+  --border:        rgba(60,48,30,0.09);
+  --border-hover:  rgba(60,48,30,0.18);
+  --border-strong: rgba(60,48,30,0.24);
 
-  --text:       #0F172A;
-  --muted:      #64748B;
-  --light:      #94A3B8;
-  --faint:      #CBD5E1;
+  --text:       #1E261D;
+  --muted:      #5C6157;
+  --light:      #8A8C82;
+  --faint:      #B4B1A6;
 
-  --accent:       #22C55E;
-  --accent-light: #4ADE80;
-  --accent-hover: #16A34A;
-  --accent-bg:    #F0FDF4;
+  --accent:       var(--primary);
+  --accent-light: #4E7D57;
+  --accent-hover: var(--primary-dark);
+  --accent-bg:    var(--primary-bg);
 
-  /* ── Grønne aliases (bruges i app.js) ── */
-  --green-50:  #F0FDF4;
-  --green-100: #DCFCE7;
+  --green-50:  #E6EDE1;
+  --green-100: #D5E1CE;
+  --green-600: #2F5E3A;
 
   /* ── Typography ── */
-  --font:      'Inter', system-ui, -apple-system, sans-serif;
-  --font-head: 'Inter', system-ui, sans-serif;
-  --font-body: 'Inter', system-ui, sans-serif;
+  --font:      'Geist', system-ui, -apple-system, sans-serif;
+  --font-body: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-head: 'Fraunces', 'Iowan Old Style', Georgia, serif;
 
   /* ── Geometry ── */
   --r:      12px;
-  --r-sm:   8px;
-  --r-xs:   5px;
-  --r-lg:   18px;
+  --r-sm:   9px;
+  --r-xs:   6px;
+  --r-lg:   20px;
   --r-full: 100px;
 
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 20px 40px rgba(0,0,0,0.12);
+  /* Skygger farvet med varm brun — ét lys oppefra */
+  --shadow-sm: 0 1px 2px rgba(58,44,24,0.06), 0 1px 1px rgba(58,44,24,0.04);
+  --shadow-md: 0 6px 18px -6px rgba(58,44,24,0.14), 0 2px 4px rgba(58,44,24,0.05);
+  --shadow-lg: 0 24px 48px -16px rgba(58,44,24,0.22), 0 4px 10px rgba(58,44,24,0.06);
+
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 28%, transparent);
 
   /* ── Nav ── */
   --nav-h: 68px;
+
+  /* ── Z-skala ── */
+  --z-top: 50;
+  --z-nav: 200;
+  --z-modal: 1000;
+  --z-toast: 1100;
+}
+
+/* ── Mørk tilstand: skov om natten ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary:        #93B985;
+    --primary-dark:   #A9C99C;
+    --primary-darker: #BFD8B4;
+    --primary-bg:     #213021;
+    --primary-border: #33492F;
+    --on-primary:     #10180F;
+
+    --slate-900: #EEEEE6;
+    --slate-800: #DEDFD5;
+    --slate-700: #C6C8BC;
+    --slate-600: #A9AC9F;
+    --slate-500: #8B8F82;
+    --slate-400: #6F7468;
+    --slate-300: #4A5046;
+    --slate-200: #363C33;
+    --slate-100: #2A3028;
+    --slate-50:  #222821;
+
+    --moss-50:  #213021; --moss-100: #283A27; --moss-200: #33492F;
+    --moss-700: #93B985; --moss-800: #A9C99C; --moss-900: #BFD8B4;
+    --rye-50: #2D2516; --rye-100: #44361C; --rye-800: #E2BC7C;
+    --amber-50: #2D2516; --amber-100: #44361C; --amber-600: #D3A35A; --amber-800: #E2BC7C;
+    --fjord-50: #213021; --fjord-100: #283A27; --fjord-800: #A9C99C;
+    --teal-50: #213021; --teal-100: #283A27; --teal-200: #3E5A3A; --teal-600: #A9C99C; --teal-800: #BFD8B4;
+    --stone-100: #2A3028; --stone-200: #363C33; --stone-800: #DEDFD5;
+    --berry-50: #321D18; --berry-100: #4A2A22; --berry-400: #D98A77; --berry-600: #E7A090; --berry-800: #F1BBAE;
+    --coral-400: #D99572; --coral-600: #E5AA8A;
+    --clay-50: #33231A; --clay-100: #4A3224; --clay-800: #EFC2A6;
+
+    --bg:      #141913;
+    --card:    #1C221B;
+    --surface: #222821;
+    --border:        rgba(235,240,225,0.08);
+    --border-hover:  rgba(235,240,225,0.16);
+    --border-strong: rgba(235,240,225,0.24);
+
+    --text:  #ECEDE4;
+    --muted: #A9AC9F;
+    --light: #80857A;
+    --faint: #5E6359;
+
+    --accent-light: #7BA36E;
+    --green-50: #213021; --green-100: #283A27; --green-600: #93B985;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 8px 20px -8px rgba(0,0,0,0.5);
+    --shadow-lg: 0 24px 48px -16px rgba(0,0,0,0.6);
+  }
 }
 
 html {
@@ -163,7 +237,7 @@ button, a, [role="button"],
   justify-content: center;
   margin: 0 auto 1.25rem;
   font-size: 24px;
-  box-shadow: 0 8px 24px rgba(34,197,94,0.3);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .auth-logo {
@@ -281,8 +355,8 @@ input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="number"]:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(34,197,94,0.12);
-  background: white;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+  background: var(--card);
 }
 
 select {
@@ -301,7 +375,7 @@ select {
   width: 100%;
   padding: 14px;
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   border: none;
   border-radius: var(--r-sm);
   font-family: var(--font);
@@ -311,13 +385,13 @@ select {
   transition: all 0.2s;
   margin-top: 0.5rem;
   letter-spacing: 0.01em;
-  box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .btn-primary:hover {
   background: var(--primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(34,197,94,0.35);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
 .btn-primary:active { transform: translateY(0); }
@@ -399,7 +473,7 @@ select {
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
-  color: white;
+  color: var(--on-primary);
   cursor: pointer;
 }
 
@@ -409,13 +483,13 @@ select {
   bottom: 0; left: 0; right: 0;
   /* Højde: nav + home bar på iPhone */
   height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
-  background: white;
+  background: var(--card);
   border-top: 1px solid var(--border);
   display: flex;
   align-items: flex-start; /* items øverst, home bar er luft nedenunder */
   justify-content: space-around;
   z-index: 200;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+  box-shadow: 0 -4px 20px rgba(58,44,24,0.06);
   padding: 0;
 }
 
@@ -739,12 +813,12 @@ select {
   border-radius: var(--r-lg);
   margin-bottom: 0.75rem;
   overflow: hidden;
-  border: 1.5px solid #FED7AA;
+  border: 1.5px solid var(--clay-100);
   background: var(--card);
 }
 
 .kids-header {
-  background: #FFF7ED;
+  background: var(--clay-50);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -754,21 +828,21 @@ select {
   transition: background 0.2s;
 }
 
-.kids-header:hover { background: #FFEDD5; }
+.kids-header:hover { background: var(--clay-100); }
 
 .kids-header-left { display: flex; align-items: center; gap: 12px; }
 
 .kids-icon {
   width: 40px; height: 40px;
   border-radius: 12px;
-  background: #EA580C;
+  background: var(--coral-600);
   display: flex; align-items: center; justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
 }
 
-.kids-title { font-size: 15px; font-weight: 700; color: #7C2D12; }
-.kids-sub { font-size: 12px; color: #9A3412; margin-top: 2px; }
+.kids-title { font-size: 15px; font-weight: 700; color: var(--clay-800); }
+.kids-sub { font-size: 12px; color: var(--clay-800); margin-top: 2px; }
 
 .kids-toggle { position: relative; width: 48px; height: 28px; flex-shrink: 0; }
 .kids-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
@@ -781,13 +855,13 @@ select {
   cursor: pointer;
 }
 
-.kids-toggle input:checked + .kids-toggle-track { background: #EA580C; }
+.kids-toggle input:checked + .kids-toggle-track { background: var(--coral-600); }
 
 .kids-toggle-thumb {
   position: absolute;
   width: 22px; height: 22px;
   border-radius: 50%;
-  background: white;
+  background: var(--card);
   top: 3px; left: 3px;
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: none;
@@ -798,8 +872,8 @@ select {
 
 .kids-body {
   display: none;
-  background: #FFF7ED;
-  border-top: 1px solid #FED7AA;
+  background: var(--clay-50);
+  border-top: 1px solid var(--clay-100);
   padding: 1.1rem 1.25rem 1.25rem;
 }
 
@@ -808,7 +882,7 @@ select {
 .kids-field-label {
   font-size: 11px;
   font-weight: 700;
-  color: #9A3412;
+  color: var(--clay-800);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 0.75rem;
@@ -822,46 +896,46 @@ select {
 .kids-age-chip {
   padding: 7px 14px;
   border-radius: var(--r-full);
-  border: 1.5px solid #FED7AA;
+  border: 1.5px solid var(--clay-100);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
-  background: white;
-  color: #9A3412;
+  background: var(--card);
+  color: var(--clay-800);
   user-select: none;
 }
 
-.kids-age-chip:hover { border-color: #EA580C; color: #EA580C; }
-.kids-age-chip.active { background: #EA580C; border-color: #EA580C; color: white; }
+.kids-age-chip:hover { border-color: var(--coral-600); color: var(--coral-600); }
+.kids-age-chip.active { background: var(--coral-600); border-color: var(--coral-600); color: var(--on-primary); }
 
 .kids-options { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
 
 .kids-option {
   padding: 12px;
-  border: 1.5px solid #FED7AA;
+  border: 1.5px solid var(--clay-100);
   border-radius: var(--r);
-  background: white;
+  background: var(--card);
   cursor: pointer;
   transition: all 0.2s;
   user-select: none;
 }
 
-.kids-option:hover { border-color: #EA580C; }
-.kids-option.active { border-color: #EA580C; background: #FFF7ED; }
+.kids-option:hover { border-color: var(--coral-600); }
+.kids-option.active { border-color: var(--coral-600); background: var(--clay-50); }
 .kids-option-icon { font-size: 20px; margin-bottom: 5px; }
-.kids-option-title { font-size: 13px; font-weight: 700; color: #7C2D12; }
-.kids-option.active .kids-option-title { color: #EA580C; }
-.kids-option-desc { font-size: 11px; color: #9A3412; margin-top: 2px; line-height: 1.4; }
+.kids-option-title { font-size: 13px; font-weight: 700; color: var(--clay-800); }
+.kids-option.active .kids-option-title { color: var(--coral-600); }
+.kids-option-desc { font-size: 11px; color: var(--clay-800); margin-top: 2px; line-height: 1.4; }
 
 .kids-info-box {
   margin-top: 1rem;
   padding: 10px 12px;
-  background: rgba(234,88,12,0.07);
+  background: color-mix(in srgb, var(--coral-600) 7%, transparent);
   border-radius: var(--r-sm);
-  border-left: 3px solid #EA580C;
+  border-left: 3px solid var(--coral-600);
   font-size: 13px;
-  color: #7C2D12;
+  color: var(--clay-800);
   line-height: 1.5;
 }
 
@@ -873,7 +947,7 @@ select {
   width: 100%;
   padding: 18px;
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   border: none;
   border-radius: var(--r-lg);
   font-family: var(--font);
@@ -886,14 +960,14 @@ select {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  box-shadow: 0 4px 20px rgba(34,197,94,0.35);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 35%, transparent);
   margin-bottom: 0.75rem;
 }
 
 .gen-btn:hover {
   background: var(--primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(34,197,94,0.4);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--primary) 40%, transparent);
 }
 
 .gen-btn:active { transform: translateY(0); }
@@ -924,14 +998,21 @@ select {
   white-space: nowrap;
 }
 
-.offer-chip.netto { border-color: #D4B800; color: #6b5c00; background: #FFFBDC; }
-.offer-chip.rema  { border-color: #CC0010; color: #7a000a; background: #FDE8EA; }
-.offer-chip.lidl  { border-color: #0050AA; color: #002855; background: #E0EAFB; }
-.offer-chip.disc  { border-color: #1976D2; color: #0d3c7a; background: #E3F2FD; }
-.offer-chip.spar  { border-color: #E65100; color: #7a2900; background: #FFF3E0; }
-.offer-chip.meny  { border-color: #424242; color: #111;    background: #F5F5F5; }
-.offer-chip.aldi  { border-color: #1565C0; color: #0a2a5e; background: #E8EAF6; }
-.offer-chip.coop  { border-color: #2E7D32; color: #1b4d1e; background: #E8F5E9; }
+/* Butikker: neutral chip + lille brandfarvet prik (genkendelig, men rolig) */
+.offer-chip::before {
+  content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--brand, var(--slate-400)); margin-right: 7px; vertical-align: 1px;
+}
+.offer-chip.netto { --brand: #E8C21A; }
+.offer-chip.rema  { --brand: #C8202E; }
+.offer-chip.lidl  { --brand: #1B5AA6; }
+.offer-chip.disc  { --brand: #3478C6; }
+.offer-chip.spar  { --brand: #D9531E; }
+.offer-chip.meny  { --brand: #3A3A3A; }
+.offer-chip.aldi  { --brand: #1A4A8F; }
+.offer-chip.coop  { --brand: #2D7A3A; }
+.offer-chip.bilka { --brand: #2563A8; }
+.offer-chip.fotex { --brand: #1F6F43; }
 
 /* ═══════════════════
    LOADING
@@ -986,10 +1067,10 @@ select {
 
 .action-btn.primary {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   border-color: var(--primary);
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(34,197,94,0.25);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 .action-btn.primary:hover { background: var(--primary-dark); }
@@ -1109,7 +1190,7 @@ select {
 .badge-amber  { background: var(--amber-50);      color: var(--amber-800); }
 .badge-teal   { background: var(--teal-50);       color: var(--teal-800); }
 .badge-gray   { background: var(--slate-100);     color: var(--slate-700); }
-.badge-coral  { background: #FFF7ED;              color: #9A3412; }
+.badge-coral  { background: var(--clay-50);              color: var(--clay-800); }
 .badge-veg    { background: var(--primary-bg);    color: var(--primary-darker); }
 
 .meal-price {
@@ -1209,7 +1290,7 @@ select {
 
 .shop-cb:hover { border-color: var(--primary); }
 .shop-cb.checked { background: var(--primary); border-color: var(--primary); }
-.shop-cb.checked::after { content: '✓'; font-size: 12px; color: #fff; font-weight: 700; }
+.shop-cb.checked::after { content: '✓'; font-size: 12px; color: var(--on-primary); font-weight: 700; }
 
 .shop-item-name { flex: 1; font-size: 14px; color: var(--text); font-weight: 500; }
 .shop-item-amount { font-size: 13px; color: var(--muted); }
@@ -1269,9 +1350,9 @@ select {
   background: var(--primary);
   display: flex; align-items: center; justify-content: center;
   font-size: 24px; font-weight: 800;
-  color: #fff;
+  color: var(--on-primary);
   flex-shrink: 0;
-  box-shadow: 0 4px 16px rgba(34,197,94,0.3);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .profile-name { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.3px; }
@@ -1484,7 +1565,7 @@ select {
 .cat-chip.active {
   background: var(--primary);
   border-color: var(--primary);
-  color: white;
+  color: var(--on-primary);
 }
 
 /* ═══════════════════
@@ -1522,7 +1603,7 @@ select {
 
 .recipe-search:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(34,197,94,0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 /* clear button (WebKit) */
@@ -1559,8 +1640,8 @@ select {
 }
 
 .shopping-cta:hover {
-  background: #dcfce7;
-  box-shadow: 0 2px 12px rgba(34,197,94,0.15);
+  background: var(--moss-100);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
 .shopping-cta-left {
@@ -1712,7 +1793,7 @@ select {
   width: 24px; height: 24px;
   border-radius: 50%;
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   font-size: 12px;
   font-weight: 700;
   display: flex; align-items: center; justify-content: center;
@@ -1773,9 +1854,9 @@ select {
 }
 
 .save-meal-btn:hover, .save-meal-btn.saved {
-  border-color: #f43f5e;
-  color: #f43f5e;
-  background: #fff1f2;
+  border-color: var(--berry-400);
+  color: var(--berry-400);
+  background: var(--berry-50);
 }
 
 /* ═══════════════════
@@ -1792,8 +1873,8 @@ select {
 }
 
 .saved-recipe-card {
-  border-color: #fde68a;
-  background: #fffbeb;
+  border-color: var(--amber-100);
+  background: var(--amber-50);
 }
 
 .delete-saved-btn {
@@ -1808,7 +1889,7 @@ select {
   transition: color 0.15s;
 }
 
-.delete-saved-btn:hover { color: #dc2626; }
+.delete-saved-btn:hover { color: var(--berry-600); }
 
 /* ═══════════════════
    TOAST NOTIFICATION
@@ -1819,8 +1900,8 @@ select {
   bottom: calc(var(--nav-h) + 12px);
   left: 50%;
   transform: translateX(-50%) translateY(20px);
-  background: #0F172A;
-  color: #fff;
+  background: var(--text);
+  color: var(--on-primary);
   font-size: 13px;
   font-weight: 500;
   padding: 10px 20px;
@@ -1881,7 +1962,7 @@ select {
 .custom-item-btn {
   padding: 9px 18px;
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   border: none;
   border-radius: var(--r-full);
   font-family: var(--font);
@@ -1898,10 +1979,9 @@ select {
    STORE BADGE COLOURS — Bilka, Føtex
    ═══════════════════ */
 
-.badge-bilka  { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
-.badge-fotex  { background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0; }
-.offer-chip.bilka { background: #EFF6FF; color: #1D4ED8; }
-.offer-chip.fotex { background: #F0FDF4; color: #15803D; }
+.badge-bilka  { background: var(--slate-100); color: var(--slate-700); border: 1px solid var(--slate-200); }
+.badge-fotex  { background: var(--primary-bg); color: var(--primary-darker); border: 1px solid var(--primary-border); }
+
 
 /* ═══════════════════
    MADPAKKER
@@ -1957,7 +2037,7 @@ select {
 @media print {
   .bottom-nav, .plan-actions, .action-btn, .gen-btn, .swap-btn { display: none !important; }
   .layout { padding-bottom: 0; }
-  body { background: white; }
+  body { background: var(--card); }
 }
 
 /* ═══════════════════
@@ -2000,7 +2080,7 @@ select {
 
 /* ── user-pill (kept for JS refs) ── */
 .user-pill { display: flex; align-items: center; gap: 10px; }
-.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--on-primary); flex-shrink: 0; }
 .user-name { font-size: 13px; font-weight: 700; color: var(--text); }
 
 /* ═══════════════════
@@ -2054,3 +2134,667 @@ select {
   animation: spin 0.8s linear infinite;
 }
 .user-email { font-size: 11px; color: var(--muted); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   NY NORDISK LAYER — typografi, overflader, komponenter og tilstande.
+   Ligger sidst så det overstyrer de generiske regler ovenfor.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Base ── */
+body {
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  letter-spacing: -0.005em;
+  font-feature-settings: "ss01", "cv11";
+}
+p, .page-sub, .meal-detail, .empty-sub, .auth-sub, .opt-btn-desc { text-wrap: pretty; }
+h1, h2, h3, .page-title, .plan-title, .day-date { text-wrap: balance; }
+
+/* Fint papirkorn — bryder den digitale fladhed (pointer-events: none) */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.28 0 0 0 0 0.18 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) { body::before { opacity: 0.5; mix-blend-mode: screen; } }
+#app-screen, #auth-screen { position: relative; z-index: 1; }
+
+/* Tal: altid tabulære så priser står pænt under hinanden */
+.counter-val, .total-amount, .stat-num, .meal-price, .shop-item-price,
+.budget-row input, .rd-persons-row, .shopping-cta-sub { font-variant-numeric: tabular-nums; }
+
+/* ── Display-typografi (Fraunces) ── */
+.auth-logo, .top-bar-logo, .page-title, .plan-title, .day-date,
+.shop-list-title, .loading-text, .empty-text, .profile-name,
+.modal-title, .rd-name, .history-title, .section-title,
+.counter-val, .total-amount, .stat-num, .kids-title, .shopping-cta-title {
+  font-family: var(--font-head);
+  font-optical-sizing: auto;
+}
+
+.auth-logo, .top-bar-logo { font-weight: 600; letter-spacing: -0.02em; }
+.auth-logo { font-size: 2.1rem; }
+.top-bar-logo { font-size: 1.45rem; }
+.auth-logo em, .top-bar-logo em, .page-title em {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.page-head { padding: 0.5rem 0 1.5rem; }
+.page-title {
+  font-size: 2.05rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+.page-sub { font-size: 14.5px; color: var(--muted); margin-top: 8px; max-width: 34ch; }
+
+/* Sektionstitler: sætningsform, ikke råbende versaler */
+.section-title {
+  font-size: 1.12rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--text);
+  margin-bottom: 0.9rem;
+  gap: 10px;
+}
+.section-icon { display: none; }
+.section-title .section-num {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-bg);
+  border-radius: 6px;
+  padding: 2px 6px;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.section-hint { font-size: 13.5px; color: var(--muted); margin: -0.4rem 0 0.9rem; line-height: 1.5; }
+
+.field-label, .input-group label, .kids-field-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+/* ── Overflader ── */
+.section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: none;
+  padding: 1.35rem 1.25rem 1.4rem;
+  margin-bottom: 0.85rem;
+}
+.day-card, .recipe-card, .history-card, .shop-section, .profile-section {
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Top bar & bund-navigation: frostet glas ── */
+.top-bar {
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  backdrop-filter: saturate(1.4) blur(14px);
+  z-index: var(--z-top);
+}
+.top-bar-avatar, .avatar {
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.top-bar-avatar { transition: transform 0.15s ease; }
+.top-bar-avatar:active { transform: scale(0.94); }
+
+.bottom-nav {
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  -webkit-backdrop-filter: saturate(1.5) blur(18px);
+  backdrop-filter: saturate(1.5) blur(18px);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 24px -12px rgba(58,44,24,0.18);
+  padding-top: 6px;
+  z-index: var(--z-nav);
+}
+.nav-item {
+  color: var(--slate-500);
+  font-size: 11px;
+  font-weight: 500;
+  gap: 3px;
+  padding: 4px 8px 8px;
+}
+.nav-item svg {
+  width: 44px; height: 30px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  stroke-width: 1.8;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.nav-item.active { color: var(--primary); font-weight: 600; }
+.nav-item.active svg { background: var(--primary-bg); }
+@media (hover: hover) { .nav-item:hover { color: var(--text); } }
+
+/* ── Knapper ── */
+.btn-primary, .gen-btn, .action-btn.primary, .custom-item-btn {
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.12) inset, 0 6px 16px -8px color-mix(in srgb, var(--primary) 70%, transparent);
+  font-family: var(--font);
+  transition: background 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
+}
+.btn-primary { border-radius: var(--r); font-weight: 600; font-size: 15.5px; }
+@media (hover: hover) {
+  .btn-primary:hover, .gen-btn:hover, .action-btn.primary:hover, .custom-item-btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+  }
+}
+.btn-primary:active, .gen-btn:active, .action-btn:active { transform: scale(0.98); }
+
+.gen-btn {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  padding: 18px 20px;
+  border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.gen-btn .gen-btn-arrow { transition: transform 0.2s ease; }
+@media (hover: hover) { .gen-btn:hover .gen-btn-arrow { transform: translateX(3px); } }
+
+.btn-ghost, .btn-danger {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 11px 18px;
+  border-radius: var(--r-sm);
+  font-family: var(--font);
+  font-size: 14px; font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn-ghost { border: 1.5px solid var(--slate-200); color: var(--text); }
+.btn-ghost:hover { border-color: var(--slate-300); background: var(--surface); }
+.btn-ghost.muted { color: var(--muted); }
+.btn-danger { border: 1.5px solid var(--berry-100); color: var(--berry-600); }
+.btn-danger:hover { background: var(--berry-50); }
+.btn-block { width: 100%; margin-top: 12px; }
+.btn-stack { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+
+/* ── Fokus: tydelig ring til tastaturbrugere ── */
+:where(button, a, input, select, textarea, [onclick], [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-sm);
+}
+.input-group input:focus, input[type="text"]:focus, input[type="email"]:focus,
+input[type="password"]:focus, input[type="number"]:focus, input[type="search"]:focus, select:focus {
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+  background: var(--card);
+}
+
+/* ── Felter: 16px forhindrer iOS-zoom ved fokus ── */
+.input-group input, input[type="text"], input[type="email"], input[type="password"],
+input[type="number"], input[type="search"], select {
+  font-size: 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--slate-200);
+  color: var(--text);
+  font-family: var(--font);
+}
+.ingredient-row input[type="text"], .pref-row input[type="text"] { font-size: 16px; padding: 10px 12px; }
+::placeholder { color: var(--slate-400); opacity: 1; }
+
+/* Inkluder/ekskluder-række: vælger og antal får plads, tekst fylder resten */
+.pref-row { display: grid; grid-template-columns: auto 1fr 64px 30px; gap: 6px; }
+.pref-row select { padding: 10px 8px; font-size: 14px; }
+.pref-count { width: auto !important; padding: 10px 6px !important; }
+
+/* ── Butiksvalg: rolige chips med brandprik ── */
+#shops-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.shop-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px 9px 10px;
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--r-full);
+  background: var(--card);
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+.shop-card .shop-logo { display: none; }
+.shop-card::before {
+  content: '';
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--brand, var(--slate-400));
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand, var(--slate-400)) 20%, transparent);
+}
+.shop-card[data-shop="netto"] { --brand: #E8C21A; }
+.shop-card[data-shop="rema"]  { --brand: #C8202E; }
+.shop-card[data-shop="lidl"]  { --brand: #1B5AA6; }
+.shop-card[data-shop="365"]   { --brand: #3478C6; }
+.shop-card[data-shop="fakta"] { --brand: #D9531E; }
+.shop-card[data-shop="meny"]  { --brand: #3A3A3A; }
+.shop-card[data-shop="bilka"] { --brand: #2563A8; }
+.shop-card[data-shop="fotex"] { --brand: #1F6F43; }
+.shop-card[data-shop="coop"]  { --brand: #2D7A3A; }
+@media (prefers-color-scheme: dark) { .shop-card[data-shop="meny"] { --brand: #BDBDB5; } }
+.shop-name { font-size: 14px; font-weight: 500; color: var(--text); }
+.shop-badge {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--slate-500);
+  margin: 0;
+}
+.shop-badge:not(.is-beta) { display: none; }
+@media (hover: hover) { .shop-card:hover { border-color: var(--slate-300); } }
+.shop-card.selected {
+  border-color: var(--primary);
+  background: var(--primary-bg);
+}
+.shop-card.selected .shop-name { color: var(--primary-darker); font-weight: 600; }
+.shop-card.selected::after {
+  content: '';
+  position: static;
+  width: 14px; height: 14px;
+  margin-left: 2px;
+  background: var(--primary);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.shop-card:active { transform: scale(0.96); }
+
+.offers-label { font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 1.1rem 0 0.6rem; }
+.offer-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--slate-700);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 11px;
+}
+
+/* ── Tæller ── */
+.counter-val { font-size: 2.1rem; font-weight: 500; letter-spacing: -0.02em; }
+.counter-btn {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  border: 1.5px solid var(--slate-200);
+  background: var(--card);
+  color: var(--text);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.counter-btn:active { transform: scale(0.92); }
+
+/* ── Tags ── */
+.tag {
+  border: 1.5px solid var(--slate-200);
+  background: var(--card);
+  color: var(--slate-700);
+  font-weight: 500;
+  font-size: 13.5px;
+  padding: 8px 14px;
+}
+@media (hover: hover) { .tag:hover { border-color: var(--slate-300); color: var(--text); } }
+.tag.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+  font-weight: 600;
+}
+
+/* ── Optimering: radiokort ── */
+.opt-btn {
+  border: 1.5px solid var(--slate-200);
+  background: var(--card);
+  padding: 14px 13px 15px;
+  border-radius: var(--r);
+}
+.opt-btn.active { border-color: var(--primary); background: var(--primary-bg); }
+.opt-btn.active::after { display: none; }
+.opt-btn-title {
+  font-size: 14px; font-weight: 600; color: var(--text);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.opt-btn-title::after {
+  content: '';
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid var(--slate-300);
+  flex-shrink: 0;
+  transition: border 0.15s ease;
+}
+.opt-btn.active .opt-btn-title::after { border: 5px solid var(--primary); }
+.opt-btn-desc { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+.budget-row input[type="number"] { font-size: 18px !important; font-weight: 600; }
+
+/* ── Lav mad med børn ── */
+.kids-section { border: 1.5px solid var(--clay-100); background: var(--card); }
+.kids-header { background: var(--clay-50); }
+.kids-icon { border-radius: 12px; background: var(--coral-600); color: var(--on-primary); }
+.kids-icon svg { width: 22px; height: 22px; }
+.kids-title { font-size: 1.08rem; font-weight: 600; }
+.kids-sub { opacity: 0.85; }
+.kids-option-icon { display: none; }
+.kids-option-title { font-weight: 600; }
+
+/* ── Indlæsning ── */
+.loading-text { font-size: 1.25rem; font-weight: 500; font-style: italic; }
+.spinner { border-width: 2.5px; }
+
+/* ═══ RESULTAT ═══ */
+.plan-header { align-items: flex-end; margin-bottom: 1rem; }
+.plan-title { font-size: 2rem; font-weight: 600; letter-spacing: -0.025em; }
+.plan-summary { font-size: 14px; color: var(--muted); margin-top: 6px; max-width: 46ch; line-height: 1.5; }
+.action-btn {
+  border: 1.5px solid var(--slate-200);
+  background: var(--card);
+  color: var(--text);
+  font-weight: 500;
+  border-radius: var(--r-sm);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+
+/* Nøgletal: én samlet række i stedet for tre farvede bokse */
+.plan-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.plan-stat { background: var(--card); padding: 0.9rem 1rem 1rem; }
+.plan-stat-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.plan-stat-value {
+  font-family: var(--font-head);
+  font-size: 1.55rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.plan-stat-value.is-positive { color: var(--primary); }
+.plan-stat-value.is-text { font-size: 1.2rem; }
+
+.plan-theme {
+  display: flex; gap: 12px; align-items: baseline;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+  border-left: 3px solid var(--rye-800);
+  background: var(--rye-50);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.plan-theme-label { font-size: 12px; font-weight: 600; color: var(--amber-600); white-space: nowrap; }
+.plan-theme-text { font-family: var(--font-head); font-style: italic; font-size: 1.02rem; color: var(--amber-800); line-height: 1.35; }
+
+/* Gammel total-bar (bruges stadig af frokostplan) */
+.total-bar { flex-direction: column; align-items: flex-start; gap: 2px; border-width: 1px; }
+.total-label { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 500; }
+.total-amount { font-size: 1.5rem; font-weight: 500; }
+
+/* Dagkort */
+.day-card { border-radius: var(--r-lg); margin-bottom: 0.9rem; }
+.day-card-photo, .day-card-photo-placeholder { height: 168px; }
+.day-card-photo-placeholder {
+  font-size: 2.6rem;
+  background:
+    radial-gradient(120% 90% at 20% 10%, color-mix(in srgb, var(--primary-bg) 90%, transparent), transparent 60%),
+    repeating-linear-gradient(135deg, var(--surface) 0 10px, var(--slate-100) 10px 11px);
+}
+.day-card-body { padding: 1rem 1.15rem 0.6rem; }
+.day-label { font-size: 11.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--primary); }
+.day-date { font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.4rem; }
+
+/* RETTELSE: måltidet fik før kun ~40% af bredden på mobil.
+   Nu: type + pris i toppen, retten i fuld bredde, handlinger nederst. */
+.meal-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "type  price"
+    "info  info"
+    "acts  acts";
+  column-gap: 12px;
+  row-gap: 4px;
+  padding: 14px 0 12px;
+}
+.meal-type {
+  grid-area: type;
+  width: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--light);
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 0;
+}
+.meal-price {
+  grid-area: price;
+  font-family: var(--font-head);
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--text);
+  padding: 0;
+}
+.meal-price small { font-family: var(--font); font-size: 11px; color: var(--muted); font-weight: 500; }
+.meal-info { grid-area: info; }
+.meal-name { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
+.meal-detail { font-size: 13.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+.meal-badges { margin-top: 9px; gap: 6px; }
+.meal-actions {
+  grid-area: acts;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-direction: row;
+}
+.badge { border-radius: 6px; font-weight: 500; font-size: 11.5px; padding: 3px 8px; }
+.badge-gray { background: var(--surface); color: var(--slate-700); border: 1px solid var(--border); }
+
+/* Tip- og børnenoter (før inline-styles i app.js) */
+.meal-note {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 9px 12px;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  border-left: 3px solid;
+}
+.meal-note strong { font-weight: 600; }
+.meal-note--tip  { background: var(--primary-bg); border-color: var(--teal-200); color: var(--primary-darker); }
+.meal-note--kids { background: var(--clay-50);   border-color: var(--coral-400); color: var(--clay-800); }
+
+.swap-btn, .save-meal-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--r-full);
+  background: var(--card);
+  color: var(--slate-700);
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 500;
+  margin: 0;
+}
+.save-meal-btn { width: 34px; padding: 0; justify-content: center; font-size: 15px; }
+.swap-btn svg, .save-meal-btn svg { width: 15px; height: 15px; }
+@media (hover: hover) { .swap-btn:hover, .save-meal-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); } }
+.save-meal-btn.saved { color: var(--berry-600); border-color: var(--berry-100); background: var(--berry-50); }
+
+/* Indkøbs-CTA */
+.shopping-cta { border-radius: var(--r-lg); }
+.shopping-cta-title { font-size: 1.1rem; font-weight: 600; }
+
+/* ── Skeleton: varm shimmer ── */
+.skel-line, .skel-photo {
+  background: linear-gradient(90deg, var(--slate-100) 0%, var(--surface) 50%, var(--slate-100) 100%);
+  background-size: 200% 100%;
+}
+
+/* ── Opskrifter ── */
+.recipe-card { border-radius: var(--r-lg); gap: 0.9rem; padding: 0.75rem 1rem 0.75rem 0.75rem; }
+.recipe-card-photo, .recipe-card-photo-placeholder { width: 68px; height: 68px; border-radius: 14px; }
+.recipe-card-photo-placeholder { font-size: 1.7rem; background: var(--primary-bg); }
+.recipe-card-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.recipe-card-arrow { color: var(--slate-400); }
+.cat-chip { border-radius: 6px; font-weight: 500; }
+.cat-chip.active { color: var(--on-primary); }
+.recipe-search { font-size: 16px !important; }
+
+/* ── Profil ── */
+.profile-avatar-big { border-radius: 20px; background: var(--primary); color: var(--on-primary); font-family: var(--font-head); font-weight: 500; }
+.profile-name { font-size: 1.45rem; font-weight: 600; letter-spacing: -0.02em; }
+.profile-row { display: flex; align-items: center; gap: 1.25rem; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); }
+.stat-num { font-weight: 500; letter-spacing: -0.02em; color: var(--text); }
+.stat-lbl { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 12px; }
+.settings-stack { display: flex; flex-direction: column; gap: 10px; }
+.settings-stack .input-group { margin: 0; }
+.input-narrow { width: 96px !important; }
+.form-msg { display: none; margin-bottom: 10px; padding: 10px 14px; border-radius: var(--r-sm); font-size: 13px; font-weight: 500; }
+.back-btn {
+  width: 38px; height: 38px; border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--slate-200); background: var(--card); color: var(--text);
+  cursor: pointer; flex-shrink: 0;
+}
+.page-head-row { display: flex; align-items: center; gap: 12px; }
+
+/* ── Auth ── */
+.auth-card {
+  border-radius: 28px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  padding: 2.5rem 1.75rem 1.75rem;
+}
+.auth-emblem {
+  width: 54px; height: 54px;
+  border-radius: 16px;
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--primary) 80%, transparent);
+}
+.auth-emblem svg { width: 28px; height: 28px; }
+.auth-sub { font-size: 14.5px; margin-bottom: 1.75rem; }
+.auth-tabs { background: var(--slate-100); border-radius: var(--r); padding: 4px; }
+.auth-tab { border-radius: 9px; font-weight: 500; font-family: var(--font); }
+.auth-tab.active { font-weight: 600; background: var(--card); }
+.auth-link-btn { color: var(--primary); }
+.auth-intro { font-size: 13.5px; color: var(--muted); margin-bottom: 1rem; text-align: left; line-height: 1.5; }
+.auth-foot { text-align: center; margin-top: 1.5rem; }
+.auth-foot a { font-size: 12px; color: var(--light); text-decoration: none; }
+.auth-center { text-align: center; margin-top: 0.75rem; }
+.demo-hint { color: var(--light); }
+.demo-hint strong { color: var(--muted); font-weight: 600; }
+
+/* ── Splash ── */
+#splash-screen {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: var(--z-toast);
+}
+.splash-logo { font-family: var(--font-head); font-size: 2.3rem; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
+.splash-logo em { font-style: italic; font-weight: 500; color: var(--primary); }
+.splash-spinner {
+  margin-top: 1.5rem; width: 26px; height: 26px;
+  border: 2.5px solid var(--slate-200); border-top-color: var(--primary);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+
+/* ── PWA-banner ── */
+.pwa-banner {
+  display: none;
+  position: fixed;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px);
+  left: 50%; transform: translateX(-50%);
+  z-index: var(--z-toast);
+  width: calc(100% - 2rem); max-width: 420px;
+  align-items: center; gap: 14px;
+  padding: 14px 16px;
+  background: var(--text); color: var(--bg);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+}
+.pwa-banner img { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
+.pwa-banner-title { font-weight: 600; font-size: 14px; }
+.pwa-banner-sub { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+.pwa-banner-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.pwa-banner-install {
+  padding: 8px 16px; border: none; border-radius: 10px; cursor: pointer;
+  background: var(--primary-border); color: var(--primary-darker);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+}
+.pwa-banner-dismiss { padding: 4px; background: none; border: none; color: inherit; opacity: 0.6; font-size: 12px; cursor: pointer; font-family: inherit; }
+
+/* ── Toast ── */
+.mp-toast { background: var(--text); color: var(--bg); border-radius: 12px; font-weight: 500; z-index: var(--z-toast); }
+
+/* ── Modaler ── */
+.modal-overlay { background: color-mix(in srgb, #12180F 45%, transparent); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); z-index: var(--z-modal); }
+.modal { background: var(--card); }
+
+/* ── Bevægelse: respektér brugerens indstilling ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* ── Lidt bredere skærme ── */
+@media (min-width: 560px) {
+  .page-title { font-size: 2.4rem; }
+  .main { padding: 0 1.25rem; }
+}
+
+/* Knap-nulstilling for nav og avatar (nu rigtige <button>s) */
+.nav-item, .top-bar-avatar { border: none; font-family: var(--font); -webkit-appearance: none; appearance: none; }
+.nav-item { background: none; }
+.section-title { margin-top: 0; }
+h2.section-title { font-size: 1.12rem; }
+.save-meal-btn.saved svg { fill: currentColor; }
+
+/* Tæller-enhed gentages i feltets label – skjult for at give plads på mobil */
+.counter-label { display: none; }
+.counter { gap: 10px; }
+
+/* Indkøbsliste: butiksnavn i sætningsform med Fraunces */
+.shop-section-name {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-family: var(--font-head);
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.shop-section-name > span:last-child { font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--muted); }
+
+/* Profil-tal: altid tre på række */
+.stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat-card { padding: 0.85rem 0.5rem; border-radius: var(--r); }
+.stat-num { font-size: 1.7rem; }
+.stat-lbl { font-size: 11.5px; line-height: 1.3; }
+.shop-section-name .badge, .shop-section-badge { font-family: var(--font); font-size: 11px; font-weight: 500; }
