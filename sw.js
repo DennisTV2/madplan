@@ -3,8 +3,8 @@
    PWA offline cache + background sync
    ═══════════════════════════════════════ */
 
-const CACHE_NAME = 'madplan-v4';
-const STATIC_CACHE = 'madplan-static-v4';
+const CACHE_NAME = 'madplan-v5';
+const STATIC_CACHE = 'madplan-static-v5';
 const API_CACHE = 'madplan-api-v4';
 
 // Files to cache for offline use

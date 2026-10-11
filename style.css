@@ -2943,3 +2943,23 @@ button, [role="button"], .tag, .shop-card, .opt-btn, .nav-item, .kids-age-chip,
 }
 .skip-link:focus { top: calc(1rem + env(safe-area-inset-top, 0px)); }
 #main-content:focus { outline: none; }
+
+/* ═══ Kontrast (fra MadPlan Design System, Tilgængelighed) ═══
+   Små tekster stod i `light`/`faint`/`slate-500` og nåede ikke 4,5:1.
+   Læsetekst → `muted` (5,5–7,7:1). Ikonknapper → mindst 3:1. */
+.meal-type, .history-date, .profile-joined, .demo-hint, .budget-hint,
+.auth-foot a, .rd-section-label, .lunch-box-type, .shop-badge,
+.offers-empty { color: var(--muted); }
+.nav-item { color: var(--slate-600); }
+.remove-btn, .delete-saved-btn { color: var(--slate-500); }
+::placeholder, .recipe-search::placeholder, .custom-item-input::placeholder { color: var(--slate-500); }
+
+/* ── Logo: blad + prismærke ─────────────────────────── */
+.brand-mark { display: block; flex: none; color: var(--primary); }
+.top-bar-logo, .splash-logo { display: inline-flex; align-items: center; gap: 0.4em; }
+.top-bar-logo .brand-mark { width: 1.05em; height: 1.05em; }
+.splash-logo .brand-mark { width: 1.1em; height: 1.1em; }
+.auth-emblem .brand-mark { width: 32px; height: 32px; color: var(--on-primary); }
+.meal-time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.shop-badge.has-count { display: block; color: var(--amber-800); font-variant-numeric: tabular-nums; }
+.shop-badge.has-count { display: block; color: var(--amber-800); font-variant-numeric: tabular-nums; }
