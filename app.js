@@ -500,11 +500,11 @@ function addPref() {
   row.className = 'pref-row';
   row.innerHTML = `
     <select class="pref-type">
-      <option value="include">✅ Inkluder</option>
-      <option value="exclude">🚫 Ekskluder</option>
+      <option value="include">Skal med</option>
+      <option value="exclude">Må ikke</option>
     </select>
-    <input type="text" placeholder="f.eks. laks, rødbeder, nødder...">
-    <input type="number" class="pref-count" placeholder="× retter" min="1" max="14">
+    <input type="text" placeholder="Ingrediens" aria-label="Ingrediens">
+    <input type="number" class="pref-count" placeholder="antal" inputmode="numeric" aria-label="Antal retter" min="1" max="14">
     <button class="remove-btn" onclick="removePref(this)">×</button>
   `;
   document.getElementById('prefs-list').appendChild(row);
@@ -670,6 +670,61 @@ function getWeekdayHint(numDays) {
 }
 
 // ── SKELETON PLAN ─────────────────────────────────────────────────────────────
+// ── HTML-escape af tekst fra AI/brugerinput (undgår brudt layout og injection) ──
+function escHtml(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+const ICON_SWAP  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg>';
+const ICON_HEART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
+
+// Børneopgave kan komme som tekst eller som objekt { task, instructions }
+function kidsActivityText(k) {
+  if (!k) return '';
+  if (typeof k === 'string') return k;
+  return [k.task, k.instructions].filter(Boolean).join(' – ');
+}
+
+// Toppen af madplanen: titel, nøgletal og ugens tema
+function buildPlanTopHTML(plan) {
+  let h = `
+    <div class="plan-header">
+      <div>
+        <h1 class="plan-title">Din madplan</h1>
+        ${plan.summary ? `<p class="plan-summary">${escHtml(plan.summary)}</p>` : ''}
+      </div>
+      <div class="plan-actions">
+        <button class="action-btn" onclick="window.print()">Print</button>
+        <button class="action-btn primary" onclick="showPage('indkob')">Indkøbsliste</button>
+      </div>
+    </div>`;
+  const stats = [];
+  if (plan.total_price)       stats.push(`<div class="plan-stat"><div class="plan-stat-label">Pris i alt</div><div class="plan-stat-value">${escHtml(plan.total_price)} kr</div></div>`);
+  if (plan.savings)           stats.push(`<div class="plan-stat"><div class="plan-stat-label">Du sparer ca.</div><div class="plan-stat-value is-positive">${escHtml(plan.savings)} kr</div></div>`);
+  if (plan.recommended_store) stats.push(`<div class="plan-stat"><div class="plan-stat-label">Bedste butik</div><div class="plan-stat-value is-text">${escHtml(plan.recommended_store)}</div></div>`);
+  if (stats.length) h += `<div class="plan-stats">${stats.join('')}</div>`;
+  if (plan.weekly_theme) {
+    h += `<div class="plan-theme"><span class="plan-theme-label">Ugens tema</span><span class="plan-theme-text">${escHtml(plan.weekly_theme)}</span></div>`;
+  }
+  return h;
+}
+
+function buildShoppingCtaHTML(plan) {
+  const totalItems = (plan.shopping_list || []).reduce((s, st) => s + (st.items?.length || 0), 0);
+  const storeCount = (plan.shopping_list || []).length;
+  return `
+    <div class="shopping-cta" role="button" tabindex="0" onclick="showPage('indkob')" onkeydown="if(event.key==='Enter')showPage('indkob')">
+      <div class="shopping-cta-left">
+        <div class="shopping-cta-icon">🛒</div>
+        <div>
+          <div class="shopping-cta-title">Indkøbslisten er klar</div>
+          <div class="shopping-cta-sub">${totalItems} varer i ${storeCount} butik${storeCount !== 1 ? 'ker' : ''}${plan.total_price ? ' · ca. ' + escHtml(plan.total_price) + ' kr' : ''}</div>
+        </div>
+      </div>
+      <div class="shopping-cta-arrow">›</div>
+    </div>`;
+}
+
 function renderSkeletonPlan(numDays) {
   const wrapper = document.getElementById('plan-output');
   wrapper.style.display = 'block';
@@ -725,26 +780,27 @@ function buildDayCardHTML(day, dayIdx) {
       </div>
       <div class="day-card-body">
         <div class="day-label">Dag ${day.day}</div>
-        <div class="day-date">${day.label || 'Dag ' + day.day}</div>`;
+        <div class="day-date">${escHtml(day.label || 'Dag ' + day.day)}</div>`;
   (day.meals || []).forEach((meal, mealIdx) => {
-    const saleTag  = meal.on_sale  ? '<span class="badge badge-amber">🏷️ Tilbud</span>' : '';
-    const tags     = (meal.tags || []).map(t => `<span class="badge badge-green">${t}</span>`).join('');
-    const storeTag = meal.store    ? `<span class="badge badge-gray">${meal.store}</span>` : '';
-    const tipHtml  = meal.tip      ? `<div style="margin-top:8px;font-size:12px;color:var(--teal-600);background:var(--teal-50);padding:6px 10px;border-radius:6px;border-left:3px solid var(--teal-200)">💡 ${meal.tip}</div>` : '';
-    const kidsHtml = meal.kids_activity ? `<div style="margin-top:8px;font-size:12px;color:#7c5c1e;background:#fef9ec;padding:6px 10px;border-radius:6px;border-left:3px solid #f5d57a">👨‍🍳 <strong>Børneopgave:</strong> ${meal.kids_activity}</div>` : '';
+    const saleTag  = meal.on_sale  ? '<span class="badge badge-amber">Tilbud</span>' : '';
+    const tags     = (meal.tags || []).map(t => `<span class="badge badge-green">${escHtml(t)}</span>`).join('');
+    const storeTag = meal.store    ? `<span class="badge badge-gray">${escHtml(meal.store)}</span>` : '';
+    const tipHtml  = meal.tip      ? `<div class="meal-note meal-note--tip"><strong>Tip:</strong> ${escHtml(meal.tip)}</div>` : '';
+    const kidsTxt  = kidsActivityText(meal.kids_activity);
+    const kidsHtml = kidsTxt       ? `<div class="meal-note meal-note--kids"><strong>Børnenes opgave:</strong> ${escHtml(kidsTxt)}</div>` : '';
     h += `
       <div class="meal-row">
-        <div class="meal-type">${meal.type}</div>
+        <div class="meal-type">${escHtml(meal.type)}</div>
+        <div class="meal-price">${meal.price_per_person ? escHtml(meal.price_per_person) + ' kr<small> /pers.</small>' : ''}</div>
         <div class="meal-info">
-          <div class="meal-name">${meal.name}</div>
-          <div class="meal-detail">${meal.description || ''}</div>
+          <div class="meal-name">${escHtml(meal.name)}</div>
+          <div class="meal-detail">${escHtml(meal.description || '')}</div>
           <div class="meal-badges">${saleTag}${storeTag}${tags}</div>
           ${tipHtml}${kidsHtml}
         </div>
-        <div class="meal-price">${meal.price_per_person ? meal.price_per_person + ' kr/p' : ''}</div>
         <div class="meal-actions">
-          <button class="swap-btn" onclick="swapMeal(${dayIdx},${mealIdx})">🔄 Udskift</button>
-          <button class="save-meal-btn" onclick="saveMealToFavorites(${dayIdx},${mealIdx})" title="Gem til mine opskrifter">♡</button>
+          <button class="save-meal-btn" onclick="saveMealToFavorites(${dayIdx},${mealIdx})" title="Gem til mine opskrifter" aria-label="Gem ret">${ICON_HEART}</button>
+          <button class="swap-btn" onclick="swapMeal(${dayIdx},${mealIdx})">${ICON_SWAP}Udskift</button>
         </div>
       </div>`;
   });
@@ -795,51 +851,10 @@ function tryRenderStreamedDays(streamText, collectedDays, renderedDayNums) {
 
 // ── FINALIZE PLAN UI AFTER STREAM COMPLETE ────────────────────────────────────
 function finalizePlanUI(plan) {
-  // Insert header + stats + theme before day cards
-  let topHtml = `
-    <div class="plan-header">
-      <div>
-        <div class="plan-title">Din madplan</div>
-        <div style="font-size:13px;color:var(--muted);margin-top:5px;max-width:560px">${plan.summary || ''}</div>
-      </div>
-      <div class="plan-actions">
-        <button class="action-btn" onclick="window.print()">🖨️ Print</button>
-        <button class="action-btn primary" onclick="showPage('indkob')">🛒 Indkøbsliste</button>
-      </div>
-    </div>`;
-  if (plan.total_price || plan.savings || plan.recommended_store) {
-    topHtml += `<div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">`;
-    if (plan.total_price) topHtml += `<div class="total-bar" style="flex:1;min-width:160px"><div class="total-label">Estimeret total</div><div class="total-amount">${plan.total_price} kr</div></div>`;
-    if (plan.savings) topHtml += `<div class="total-bar" style="flex:1;min-width:160px;background:var(--teal-50);border-color:var(--teal-100)"><div class="total-label" style="color:var(--teal-800)">Estimeret besparelse</div><div class="total-amount" style="color:var(--teal-800)">${plan.savings} kr</div></div>`;
-    if (plan.recommended_store) topHtml += `<div class="total-bar" style="flex:1;min-width:160px;background:var(--amber-50);border-color:var(--amber-100)"><div class="total-label" style="color:var(--amber-800)">Anbefalet butik</div><div class="total-amount" style="color:var(--amber-800);font-size:1.1rem">${plan.recommended_store}</div></div>`;
-    topHtml += '</div>';
-  }
-  if (plan.weekly_theme) {
-    topHtml += `<div style="background:var(--amber-50);border:0.5px solid var(--amber-100);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px">
-      <span style="font-size:18px">🗓️</span>
-      <div><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--amber-600);margin-bottom:2px">Ugens tema</div>
-      <div style="font-size:14px;color:var(--amber-800)">${plan.weekly_theme}</div></div>
-    </div>`;
-  }
   const metaTop = document.getElementById('plan-meta-top');
-  if (metaTop) metaTop.innerHTML = topHtml;
-
-  // Shopping CTA at bottom
-  const totalItems = (plan.shopping_list || []).reduce((s, st) => s + (st.items?.length || 0), 0);
-  const storeCount = (plan.shopping_list || []).length;
-  const botHtml = `
-    <div class="shopping-cta" onclick="showPage('indkob')">
-      <div class="shopping-cta-left">
-        <div class="shopping-cta-icon">🛒</div>
-        <div>
-          <div class="shopping-cta-title">Indkøbsliste klar</div>
-          <div class="shopping-cta-sub">${totalItems} varer fordelt på ${storeCount} butik${storeCount !== 1 ? 'ker' : ''}${plan.total_price ? ' · ~' + plan.total_price + ' kr' : ''}</div>
-        </div>
-      </div>
-      <div class="shopping-cta-arrow">›</div>
-    </div>`;
+  if (metaTop) metaTop.innerHTML = buildPlanTopHTML(plan);
   const metaBot = document.getElementById('plan-meta-bot');
-  if (metaBot) metaBot.innerHTML = botHtml;
+  if (metaBot) metaBot.innerHTML = buildShoppingCtaHTML(plan);
 }
 
 // ─── GENERATE PLAN ────────────────────────────────────────────────────────────
@@ -849,7 +864,7 @@ async function generatePlan() {
   const settings = gatherSettings();
 
   if (!settings.shops.length) {
-    alert('Vælg mindst én butik');
+    showToast('Vælg mindst én butik først');
     return;
   }
 
@@ -1133,9 +1148,10 @@ Svar UDELUKKENDE med ét valid JSON-objekt. Ingen markdown. Ingen backticks. Ing
     document.getElementById('result-empty').style.display = '';
     document.getElementById('result-empty').innerHTML = `
       <div class="empty-icon">⚠️</div>
-      <div class="empty-text">Noget gik galt</div>
-      <div class="empty-sub" style="color:var(--coral-600);margin-top:12px">${e.message}</div>
-      <div class="empty-sub" style="margin-top:8px">Tjek din API-nøgle og prøv igen</div>
+      <div class="empty-text">Madplanen kunne ikke laves</div>
+      <div class="empty-sub" style="color:var(--berry-600);margin-top:12px">${escHtml(e.message)}</div>
+      <div class="empty-sub" style="margin-top:8px">Prøv igen om lidt. Sker det igen, så log ud og ind.</div>
+      <button onclick="generatePlan()" class="btn-primary" style="margin-top:1.25rem;max-width:220px">Prøv igen</button>
     `;
   }
 }
@@ -1145,85 +1161,9 @@ Svar UDELUKKENDE med ét valid JSON-objekt. Ingen markdown. Ingen backticks. Ing
 function renderPlan(plan) {
   const wrapper = document.getElementById('plan-output');
   wrapper.style.display = 'block';
-
-  const storeColors = {
-    'Netto':        'amber',
-    'Rema 1000':    'coral',
-    'Lidl':         'teal',
-    '365discount':  'green',
-    'Spar':         'amber',
-    'Meny':         'gray',
-    'Aldi':         'teal',
-    'Coop':         'teal',
-  };
-
-  let html = `
-    <div class="plan-header">
-      <div>
-        <div class="plan-title">Din madplan</div>
-        <div style="font-size:13px;color:var(--muted);margin-top:5px;max-width:560px">${plan.summary || ''}</div>
-      </div>
-      <div class="plan-actions">
-        <button class="action-btn" onclick="window.print()">🖨️ Print</button>
-        <button class="action-btn primary" onclick="showPage('indkob')">🛒 Indkøbsliste</button>
-      </div>
-    </div>`;
-
-  // Stats row
-  if (plan.total_price || plan.savings || plan.recommended_store) {
-    html += `<div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">`;
-    if (plan.total_price) {
-      html += `<div class="total-bar" style="flex:1;min-width:160px">
-        <div class="total-label">Estimeret total</div>
-        <div class="total-amount">${plan.total_price} kr</div>
-      </div>`;
-    }
-    if (plan.savings) {
-      html += `<div class="total-bar" style="flex:1;min-width:160px;background:var(--teal-50);border-color:var(--teal-100)">
-        <div class="total-label" style="color:var(--teal-800)">Estimeret besparelse</div>
-        <div class="total-amount" style="color:var(--teal-800)">${plan.savings} kr</div>
-      </div>`;
-    }
-    if (plan.recommended_store) {
-      html += `<div class="total-bar" style="flex:1;min-width:160px;background:var(--amber-50);border-color:var(--amber-100)">
-        <div class="total-label" style="color:var(--amber-800)">Anbefalet butik</div>
-        <div class="total-amount" style="color:var(--amber-800);font-size:1.1rem">${plan.recommended_store}</div>
-      </div>`;
-    }
-    html += '</div>';
-  }
-
-  // Weekly theme banner
-  if (plan.weekly_theme) {
-    html += `<div style="background:var(--amber-50);border:0.5px solid var(--amber-100);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px">
-      <span style="font-size:18px">🗓️</span>
-      <div>
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--amber-600);margin-bottom:2px">Ugens tema</div>
-        <div style="font-size:14px;color:var(--amber-800)">${plan.weekly_theme}</div>
-      </div>
-    </div>`;
-  }
-
-  // Day cards
-  (plan.plan || []).forEach((day, dayIdx) => {
-    html += buildDayCardHTML(day, dayIdx);
-  });
-
-  // Shopping list CTA → Indkøb tab
-  const totalItems = (plan.shopping_list || []).reduce((s, st) => s + (st.items?.length || 0), 0);
-  const storeCount = (plan.shopping_list || []).length;
-  html += `
-    <div class="shopping-cta" onclick="showPage('indkob')">
-      <div class="shopping-cta-left">
-        <div class="shopping-cta-icon">🛒</div>
-        <div>
-          <div class="shopping-cta-title">Indkøbsliste klar</div>
-          <div class="shopping-cta-sub">${totalItems} varer fordelt på ${storeCount} butik${storeCount !== 1 ? 'ker' : ''}${plan.total_price ? ' · ~' + plan.total_price + ' kr' : ''}</div>
-        </div>
-      </div>
-      <div class="shopping-cta-arrow">›</div>
-    </div>`;
-
+  let html = buildPlanTopHTML(plan);
+  (plan.plan || []).forEach((day, dayIdx) => { html += buildDayCardHTML(day, dayIdx); });
+  html += buildShoppingCtaHTML(plan);
   wrapper.innerHTML = html;
 }
 
@@ -1685,7 +1625,7 @@ function adjustLunchPersons(d) {
 
 async function generateLunchPlan() {
   const settings = gatherSettings();
-  if (!settings.shops.length) { alert('Vælg mindst én butik på Ny madplan-siden'); return; }
+  if (!settings.shops.length) { showToast('Vælg mindst én butik på Plan-siden'); return; }
 
   const genBtn  = document.getElementById('lunch-gen-btn');
   const loading = document.getElementById('lunch-loading');
@@ -2312,8 +2252,15 @@ function recipePhotoHtml(recipe, emoji) {
   for (let i = 0; i < s.length; i++) h = Math.imul((h << 5) + h, 1) + s.charCodeAt(i) | 0;
   const photoId = pool[Math.abs(h) % pool.length];
   const url = `https://images.unsplash.com/photo-${photoId}?auto=format&fit=crop&w=144&q=65`;
-  const esc  = emoji.replace(/'/g, "\\'");
-  return `<img class="recipe-card-photo" src="${url}" loading="lazy" alt="" onerror="this.outerHTML='<div class=\\"recipe-card-photo-placeholder\\">${esc}</div>'">`;
+  // Fallback via data-attribut – før knækkede citationstegnene HTML'en, når et billede fejlede
+  return `<img class="recipe-card-photo" src="${url}" loading="lazy" alt="" data-emoji="${escHtml(emoji)}" onerror="recipePhotoFallback(this)">`;
+}
+
+function recipePhotoFallback(img) {
+  const div = document.createElement('div');
+  div.className = 'recipe-card-photo-placeholder';
+  div.textContent = img.dataset.emoji || '🍽️';
+  img.replaceWith(div);
 }
 
 // ─── SAVED MEALS / FAVORITES ─────────────────────────────────────────────────
@@ -2344,9 +2291,9 @@ function saveMealToFavorites(dayIdx, mealIdx) {
   localStorage.setItem(getSavedMealsKey(), JSON.stringify(saved.slice(0, 50)));
 
   // Visual feedback on button
-  const btn = event?.target;
-  if (btn) { btn.textContent = '♥'; btn.classList.add('saved'); }
-  showToast('Gemt til dine opskrifter ♥');
+  const btn = event?.target?.closest?.('.save-meal-btn');
+  if (btn) btn.classList.add('saved');
+  showToast('Gemt under Opskrifter');
 }
 
 function getSavedMeals() {

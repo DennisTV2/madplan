@@ -3,9 +3,9 @@
    PWA offline cache + background sync
    ═══════════════════════════════════════ */
 
-const CACHE_NAME = 'madplan-v3';
-const STATIC_CACHE = 'madplan-static-v3';
-const API_CACHE = 'madplan-api-v3';
+const CACHE_NAME = 'madplan-v4';
+const STATIC_CACHE = 'madplan-static-v4';
+const API_CACHE = 'madplan-api-v4';
 
 // Files to cache for offline use
 const STATIC_FILES = [
@@ -17,8 +17,7 @@ const STATIC_FILES = [
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap',
-];
+  ];
 
 // ─── INSTALL ──────────────────────────────────────────────────────────────────
 
@@ -87,38 +86,28 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // App shell (HTML, CSS, JS, icons) → Cache first, then network
-  // ignoreSearch:true so versioned URLs like app.js?v=7 match cached /app.js
+  // PHP-endpoints (login, proxy, historik) → altid direkte til netværket
+  if (url.origin === self.location.origin && url.pathname.endsWith('.php')) return;
+
+  // App shell (HTML, CSS, JS, ikoner) → NETWORK FIRST.
+  // Nye deploys vises med det samme; cachen bruges kun når man er offline.
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(event.request, { ignoreSearch: true }).then(cached => {
-        if (cached) {
-          // Serve cached, revalidate in background (stale-while-revalidate)
-          fetch(event.request).then(networkResponse => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(STATIC_CACHE).then(cache => cache.put(event.request, networkResponse.clone()));
-            }
-          }).catch(() => {/* offline — cached version served */});
-          return cached;
+      fetch(event.request).then(networkResponse => {
+        if (networkResponse && networkResponse.status === 200) {
+          const clone = networkResponse.clone();
+          caches.open(STATIC_CACHE).then(cache => cache.put(event.request, clone));
         }
-
-        // Not in cache → fetch and cache
-        return fetch(event.request).then(networkResponse => {
-          if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
-            // Don't cache PHP API responses
-            if (!url.pathname.endsWith('.php')) {
-              const clone = networkResponse.clone();
-              caches.open(STATIC_CACHE).then(cache => cache.put(event.request, clone));
-            }
-          }
-          return networkResponse;
-        }).catch(() => {
-          // Offline fallback — return cached index.html for navigation
+        return networkResponse;
+      }).catch(() =>
+        caches.match(event.request, { ignoreSearch: true }).then(cached => {
+          if (cached) return cached;
           if (event.request.mode === 'navigate') {
             return caches.match('/index.html', { ignoreSearch: true });
           }
-        });
-      })
+          return Response.error();
+        })
+      )
     );
     return;
   }
