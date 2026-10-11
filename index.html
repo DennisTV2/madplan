@@ -12,7 +12,7 @@
 <meta property="og:image" content="icons/icon-512.png">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="da_DK">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -39,16 +39,16 @@
 
 <!-- SPLASH (vises mens session tjekkes) -->
 <div id="splash-screen" aria-busy="true">
-  <div class="splash-logo">Mad<em>Plan</em></div>
+  <div class="splash-logo"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 52 C12 28 28 12 52 12 C52 36 36 52 12 52 Z M23.6 44 a3.6 3.6 0 1 0 -7.2 0 a3.6 3.6 0 1 0 7.2 0 Z M28.2 34.2 L44.2 18.2 A1.1 1.1 0 0 1 45.8 19.8 L29.8 35.8 A1.1 1.1 0 0 1 28.2 34.2 Z"/></svg><span>Mad<em>Plan</em></span></div>
   <div class="splash-spinner"></div>
 </div>
 
 <!-- AUTH -->
 <div id="auth-screen" style="display:none">
   <div class="auth-card">
-    <div class="auth-emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19l7-7"/></svg></div>
+    <div class="auth-emblem"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 52 C12 28 28 12 52 12 C52 36 36 52 12 52 Z M23.6 44 a3.6 3.6 0 1 0 -7.2 0 a3.6 3.6 0 1 0 7.2 0 Z M28.2 34.2 L44.2 18.2 A1.1 1.1 0 0 1 45.8 19.8 L29.8 35.8 A1.1 1.1 0 0 1 28.2 34.2 Z"/></svg></div>
     <div class="auth-logo">Mad<em>Plan</em></div>
-    <div class="auth-sub">Ugens madplan, bygget på ugens tilbud.</div>
+    <div class="auth-sub">Ugens mad. Efter ugens tilbud.</div>
     <div class="auth-tabs" id="auth-tabs">
       <button class="auth-tab active" onclick="switchTab('login')">Log ind</button>
       <button class="auth-tab" onclick="switchTab('signup')">Opret konto</button>
@@ -98,7 +98,7 @@
 
     <!-- TOP BAR -->
     <header class="top-bar">
-      <div class="top-bar-logo">Mad<em>Plan</em></div>
+      <div class="top-bar-logo"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M12 52 C12 28 28 12 52 12 C52 36 36 52 12 52 Z M23.6 44 a3.6 3.6 0 1 0 -7.2 0 a3.6 3.6 0 1 0 7.2 0 Z M28.2 34.2 L44.2 18.2 A1.1 1.1 0 0 1 45.8 19.8 L29.8 35.8 A1.1 1.1 0 0 1 28.2 34.2 Z"/></svg><span>Mad<em>Plan</em></span></div>
       <button class="top-bar-avatar" id="nav-avatar" onclick="showPage('profile')" aria-label="Gå til profil">MP</button>
     </header>
 
@@ -504,7 +504,7 @@
 </nav>
 
 <script src="recipes.js?v=1"></script>
-<script src="app.js?v=14"></script>
+<script src="app.js?v=15"></script>
 
 <!-- RECIPE DETAIL MODAL -->
 <div id="recipe-detail-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeRecipeDetail()">

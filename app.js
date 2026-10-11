@@ -412,6 +412,8 @@ async function enterApp() {
   loadHistory(); // starter fetch — ikke await, lad UI vise straks
   updateStats();
   renderOffersRow();
+  const initShops = [...document.querySelectorAll('.shop-card.selected')].map(s => s.dataset.shop);
+  if (initShops.length) refreshOffers(initShops);
   showPage('plan');
 }
 
@@ -472,7 +474,31 @@ function toggleShop(el) {
   renderOffersRow();
   // Pre-fetch offers in background so they're cached when Generate is clicked
   const shops = [...document.querySelectorAll('.shop-card.selected')].map(s => s.dataset.shop);
-  if (shops.length) fetchRealOffers(shops); // fire-and-forget
+  if (shops.length) refreshOffers(shops); // fire-and-forget
+  else updateShopOfferCounts();
+}
+
+// Henter tilbud i baggrunden og viser antal tilbud på hver valgt butik
+async function refreshOffers(shops) {
+  const data = await fetchRealOffers(shops);
+  const now = [...document.querySelectorAll('.shop-card.selected')].map(s => s.dataset.shop);
+  if (now.join(',') !== shops.join(',')) return;   // valget er ændret imens
+  realOffers = data;
+  renderOffersRow();
+  updateShopOfferCounts();
+}
+
+function updateShopOfferCounts() {
+  document.querySelectorAll('.shop-card').forEach(card => {
+    const badge = card.querySelector('.shop-badge');
+    if (!badge) return;
+    const list = realOffers?.grouped?.[card.dataset.shop];
+    const n = card.classList.contains('selected') && Array.isArray(list) ? list.length : 0;
+    if (badge.dataset.orig === undefined) badge.dataset.orig = badge.classList.contains('is-beta') ? badge.textContent : '';
+    const orig = badge.dataset.orig;
+    badge.textContent = n ? `${n} tilbud${orig ? ' · ' + orig : ''}` : orig;
+    badge.classList.toggle('has-count', n > 0);
+  });
 }
 
 function selectOpt(opt) {
@@ -788,7 +814,7 @@ function buildDayCardHTML(day, dayIdx) {
     const kidsHtml = kidsTxt       ? `<div class="meal-note meal-note--kids"><strong>Børnenes opgave:</strong> ${escHtml(kidsTxt)}</div>` : '';
     h += `
       <div class="meal-row">
-        <div class="meal-type">${escHtml(meal.type)}</div>
+        <div class="meal-type">${escHtml(meal.type)}${meal.minutes ? `<span class="meal-time"> · ${escHtml(meal.minutes)} min</span>` : ''}</div>
         <div class="meal-price">${meal.price_per_person ? escHtml(meal.price_per_person) + ' kr<small> /pers.</small>' : ''}</div>
         <div class="meal-info">
           <div class="meal-name">${escHtml(meal.name)}</div>
@@ -909,7 +935,7 @@ const AI_MODEL_FALLBACK = 'claude-sonnet-4-6'; // bruges kun hvis første forsø
 const MEAL_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'name', 'dish_en', 'description', 'store', 'price_per_person', 'tags', 'on_sale', 'tip', 'kids_activity'],
+  required: ['type', 'name', 'dish_en', 'description', 'store', 'price_per_person', 'minutes', 'tags', 'on_sale', 'tip', 'kids_activity'],
   properties: {
     type:             { type: 'string', description: 'Morgenmad, Frokost, Aftensmad eller Snacks' },
     name:             { type: 'string' },
@@ -917,6 +943,7 @@ const MEAL_SCHEMA = {
     description:      { type: 'string', description: 'Én sætning: protein, tilbehør og sauce/grønt' },
     store:            { type: 'string', description: 'Butikken hvor hovedingredienserne købes' },
     price_per_person: { type: 'number', description: 'Råvarepris for retten delt med antal personer, i kr.' },
+    minutes:          { type: 'integer', description: 'Samlet tid fra start til bordet i minutter (forberedelse + tilberedning), rundet til nærmeste 5' },
     tags:             { type: 'array', items: { type: 'string' }, description: '0-3 korte tags' },
     on_sale:          { type: 'boolean', description: 'true hvis hovedingrediensen er på tilbud' },
     tip:              { type: 'string', description: 'Konkret tip (rester, forberedelse) – ellers tom streng' },
@@ -1004,6 +1031,7 @@ Hurtigt og gerne restebaseret: rugbrød med pålæg, wraps med gårsdagens kød,
 - Køb ikke varer, som brugeren har i basislageret.
 - Indkøbslisten er det, brugeren faktisk køber: hele pakker, samlet pris pr. linje, grupperet pr. butik. total_price = summen af alle linjer.
 - price_per_person = rettens råvareforbrug delt med antal personer (ikke hele pakkens pris).
+- minutes = realistisk samlet tid i et almindeligt hjemmekøkken, rundet til nærmeste 5 min. Hverdagsaftensmad holdes gerne på 20–40 min.
 - Et budget er et loft. Hold total_price under det, også hvis det betyder enklere retter.
 
 ## Hårde krav fra brugeren
@@ -1179,6 +1207,7 @@ async function generatePlan() {
   // Offers (fast from pre-fetch cache)
   realOffers = await fetchRealOffers(settings.shops);
   renderOffersRow();
+  updateShopOfferCounts();
 
   loadingEl.textContent = 'Genererer din madplan…';
 
@@ -1450,7 +1479,7 @@ function renderHistory() {
         </div>
         <div style="text-align:right">
           <div class="history-date">${h.date}</div>
-          ${h.opt ? `<div style="font-size:11px;color:var(--light);margin-top:3px">${optLabels[h.opt] || ''}</div>` : ''}
+          ${h.opt ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">${optLabels[h.opt] || ''}</div>` : ''}
         </div>
       </div>
       ${h.summary ? `<div style="font-size:13px;color:var(--muted);margin-top:8px;line-height:1.4">${h.summary}</div>` : ''}
@@ -1494,12 +1523,12 @@ function renderOffersRow() {
       const store = STORE_OFFERS[id];
       return (realOffers.grouped[id] || []).slice(0, 5).map(o => {
         const price = o.price !== null ? ` ${o.price} kr${o.quantity ? '/' + o.quantity : ''}` : '';
-        return `<span class="offer-chip ${store?.color || 'gray'}">${store?.name || id}: ${o.heading}${price}</span>`;
+        return `<span class="offer-chip ${store?.color || 'gray'}">${escHtml(store?.name || id)}: ${escHtml(o.heading)}${escHtml(price)}</span>`;
       });
     });
     container.innerHTML = chips.length
       ? chips.join('')
-      : '<span style="font-size:13px;color:var(--faint);font-style:italic">Ingen aktuelle tilbud fundet — bruger standarddata</span>';
+      : '<span class="offers-empty" style="font-size:13px">Ingen aktuelle tilbud fundet – bruger standardpriser</span>';
     return;
   }
 
@@ -1511,7 +1540,7 @@ function renderOffersRow() {
   });
   container.innerHTML = chips.length
     ? chips.join('')
-    : '<span style="font-size:13px;color:var(--faint)">Vælg butikker for at se aktuelle tilbud</span>';
+    : '<span class="offers-empty" style="font-size:13px">Vælg butikker for at se aktuelle tilbud</span>';
 }
 
 function getFilteredOffersText(shops) {
@@ -1675,10 +1704,10 @@ ${offersText}`;
       type: 'object', additionalProperties: false, required: ['alternatives'],
       properties: { alternatives: { type: 'array', items: {
         type: 'object', additionalProperties: false,
-        required: ['name', 'description', 'store', 'price_per_person', 'tags', 'on_sale', 'vegetarian'],
+        required: ['name', 'dish_en', 'description', 'store', 'price_per_person', 'minutes', 'tags', 'on_sale', 'vegetarian'],
         properties: {
-          name: { type: 'string' }, description: { type: 'string' }, store: { type: 'string' },
-          price_per_person: { type: 'number' }, tags: { type: 'array', items: { type: 'string' } },
+          name: { type: 'string' }, dish_en: { type: 'string' }, description: { type: 'string' }, store: { type: 'string' },
+          price_per_person: { type: 'number' }, minutes: { type: 'integer' }, tags: { type: 'array', items: { type: 'string' } },
           on_sale: { type: 'boolean' }, vegetarian: { type: 'boolean' },
         },
       } } },
@@ -1704,14 +1733,15 @@ function renderAlternatives(alts) {
   container.style.display = 'block';
   container.innerHTML = alts.map((alt, i) => `
     <div class="alt-card" onclick="applyAlternative(${i})">
-      <div class="alt-card-name">${alt.name}</div>
-      <div class="alt-card-desc">${alt.description || ''}</div>
+      <div class="alt-card-name">${escHtml(alt.name)}</div>
+      <div class="alt-card-desc">${escHtml(alt.description || '')}</div>
       <div class="alt-card-meta">
-        ${alt.price_per_person ? `<span class="alt-card-price">${alt.price_per_person} kr/p</span>` : ''}
-        ${alt.on_sale      ? '<span class="badge badge-amber">🏷️ Tilbud</span>' : ''}
-        ${alt.vegetarian   ? '<span class="badge badge-veg">🥬 Vegetarisk</span>' : ''}
-        ${alt.store        ? `<span class="badge badge-gray">${alt.store}</span>` : ''}
-        ${(alt.tags || []).map(t => `<span class="badge badge-green">${t}</span>`).join('')}
+        ${alt.price_per_person ? `<span class="alt-card-price">${escHtml(alt.price_per_person)} kr /pers.</span>` : ''}
+        ${alt.minutes      ? `<span class="badge badge-gray">${escHtml(alt.minutes)} min</span>` : ''}
+        ${alt.on_sale      ? '<span class="badge badge-amber">Tilbud</span>' : ''}
+        ${alt.vegetarian   ? '<span class="badge badge-veg">Vegetarisk</span>' : ''}
+        ${alt.store        ? `<span class="badge badge-gray">${escHtml(alt.store)}</span>` : ''}
+        ${(alt.tags || []).map(t => `<span class="badge badge-green">${escHtml(t)}</span>`).join('')}
       </div>
     </div>`).join('');
 }
@@ -1720,7 +1750,8 @@ function applyAlternative(altIdx) {
   if (!swapContext || !swapAlts) return;
   const { dayIdx, mealIdx } = swapContext;
   const mealType = currentPlan.plan[dayIdx].meals[mealIdx].type;
-  currentPlan.plan[dayIdx].meals[mealIdx] = { ...swapAlts[altIdx], type: mealType };
+  const { vegetarian, ...alt } = swapAlts[altIdx];
+  currentPlan.plan[dayIdx].meals[mealIdx] = { tip: '', kids_activity: '', ...alt, type: mealType };
   validatePlan(currentPlan, gatherSettings());   // opdatér advarsler efter udskiftning
   closeSwapModal();
   renderPlan(currentPlan);
@@ -1766,6 +1797,7 @@ async function generateLunchPlan() {
   const shopNames  = settings.shops.map(id => STORE_OFFERS[id]?.name || id);
   realOffers = await fetchRealOffers(settings.shops);
   renderOffersRow();
+  updateShopOfferCounts();
   const offersText = getFilteredOffersText(settings.shops);
   const dietStr    = settings.dietTags.length ? settings.dietTags.join(', ') : '';
   const budgetVal  = document.getElementById('lunch-budget').value;
