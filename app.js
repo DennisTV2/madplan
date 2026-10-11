@@ -385,12 +385,7 @@ document.addEventListener('touchstart', (e) => {
   )) haptic();
 }, { passive: true });
 
-// Forhindre overscroll/bounce på selve dokumentet (ekstra sikring)
-document.addEventListener('touchmove', (e) => {
-  if (e.target === document.body || e.target === document.documentElement) {
-    e.preventDefault();
-  }
-}, { passive: false });
+// Overscroll styres i CSS (overscroll-behavior) – ingen touchmove-lytter, den koster frames
 
 async function enterApp() {
   document.getElementById('splash-screen')?.remove();
@@ -703,6 +698,9 @@ function buildPlanTopHTML(plan) {
   if (plan.savings)           stats.push(`<div class="plan-stat"><div class="plan-stat-label">Du sparer ca.</div><div class="plan-stat-value is-positive">${escHtml(plan.savings)} kr</div></div>`);
   if (plan.recommended_store) stats.push(`<div class="plan-stat"><div class="plan-stat-label">Bedste butik</div><div class="plan-stat-value is-text">${escHtml(plan.recommended_store)}</div></div>`);
   if (stats.length) h += `<div class="plan-stats">${stats.join('')}</div>`;
+  if (plan._warnings?.length) {
+    h += `<div class="plan-warnings" role="status">${plan._warnings.map(w => `<p>${escHtml(w)}</p>`).join('')}</div>`;
+  }
   if (plan.weekly_theme) {
     h += `<div class="plan-theme"><span class="plan-theme-label">Ugens tema</span><span class="plan-theme-text">${escHtml(plan.weekly_theme)}</span></div>`;
   }
@@ -818,6 +816,7 @@ function renderSingleDayCard(day, dayIdx) {
     const container = document.getElementById('plan-days-stream');
     if (container) container.insertAdjacentHTML('beforeend', html);
   }
+  document.getElementById('real-day-' + day.day)?.classList.add('is-arriving');
   // Kick off photo fetch for this day immediately
   const dinner = (day.meals || []).find(m => m.type === 'Aftensmad');
   if (dinner) {
@@ -858,6 +857,238 @@ function finalizePlanUI(plan) {
 }
 
 // ─── GENERATE PLAN ────────────────────────────────────────────────────────────
+
+// ─── AI-MODUL ─────────────────────────────────────────────────────────────────
+// Modeller (proxy.php godkender kun disse)
+const AI_MODEL_PLAN = 'claude-sonnet-5-5';   // madplan, udskiftning
+const AI_MODEL_FAST = 'claude-haiku-5-5';    // korte opgaver: fremgangsmåde
+
+// JSON-schema → API'et garanterer gyldig JSON (ingen "kunne ikke parse").
+// Alle felter er required, så rækkefølgen holdes: dage streames først.
+const MEAL_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'name', 'description', 'store', 'price_per_person', 'tags', 'on_sale', 'tip', 'kids_activity'],
+  properties: {
+    type:             { type: 'string', description: 'Morgenmad, Frokost, Aftensmad eller Snacks' },
+    name:             { type: 'string' },
+    description:      { type: 'string', description: 'Én sætning: protein, tilbehør og sauce/grønt' },
+    store:            { type: 'string', description: 'Butikken hvor hovedingredienserne købes' },
+    price_per_person: { type: 'number', description: 'Råvarepris for retten delt med antal personer, i kr.' },
+    tags:             { type: 'array', items: { type: 'string' }, description: '0-3 korte tags' },
+    on_sale:          { type: 'boolean', description: 'true hvis hovedingrediensen er på tilbud' },
+    tip:              { type: 'string', description: 'Konkret tip (rester, forberedelse) – ellers tom streng' },
+    kids_activity:    { type: 'string', description: 'Barnets opgave hvis børn er slået til og det er aftensmad – ellers tom streng' },
+  },
+};
+
+const PLAN_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['plan', 'shopping_list', 'total_price', 'savings', 'recommended_store', 'weekly_theme', 'summary'],
+  properties: {
+    plan: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['day', 'label', 'meals'],
+        properties: {
+          day:   { type: 'integer' },
+          label: { type: 'string' },
+          meals: { type: 'array', items: MEAL_SCHEMA },
+        },
+      },
+    },
+    shopping_list: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['store', 'items'],
+        properties: {
+          store: { type: 'string' },
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['name', 'amount', 'price', 'on_sale', 'used_in'],
+              properties: {
+                name:    { type: 'string', description: 'Vare inkl. pakningsstørrelse, fx "Hakket oksekød 8-12% 500 g"' },
+                amount:  { type: 'string', description: 'Antal pakker/stk, fx "2 pk"' },
+                price:   { type: 'number', description: 'Samlet pris for linjen i kr.' },
+                on_sale: { type: 'boolean' },
+                used_in: { type: 'string', description: 'Hvilke retter varen bruges i' },
+              },
+            },
+          },
+        },
+      },
+    },
+    total_price:       { type: 'number', description: 'Summen af alle prices i shopping_list' },
+    savings:           { type: 'number', description: 'Estimeret besparelse ift. normalpris, i kr.' },
+    recommended_store: { type: 'string' },
+    weekly_theme:      { type: 'string', description: 'Kort tema, maks 8 ord' },
+    summary:           { type: 'string', description: '1-2 sætninger om ugen og de vigtigste tilbud' },
+  },
+};
+
+// Faste regler → system-prompt med prompt caching (billigere og hurtigere ved gentagne kald).
+const PLAN_SYSTEM_PROMPT = `Du er en dansk madplanlægger med en kokkes smag og en budgetrådgivers sans for tal. Du laver hverdagsmadplaner i stil med Bilkas ugentlige madplaner: realistiske, lækre retter, som en almindelig familie kan lave på en hverdag, bygget op omkring ugens tilbud.
+
+## Kulinarisk sammenhæng
+Hver ret er en kendt, komplet ret: protein + tilbehør + sauce/grønt, der naturligt hører sammen. Skriv retten, som den står i en dansk kogebog.
+- Brug kun en tilbudsvare i en ret, hvor den er en autentisk ingrediens. Broccoli hører ikke til tikka masala eller bolognese; laks hører ikke til carbonara; kokosmælk hører ikke til frikadeller.
+- Ét hovedprotein pr. ret. Ingen laks + kylling i samme ret.
+- Tilbehør følger køkkenet: pasta til italiensk, ris/nudler til asiatisk og indisk, kartofler til dansk/nordisk, tortillas til mexicansk.
+- Morgenmad er let (grød, yoghurt, brød, æg). Aftensmad er aldrig grød.
+
+Gode eksempler: spaghetti bolognese med parmesan; citronkylling med ris og broccoli; kylling tikka masala med basmatiris og raita; ovnbagt laks med dild, kartofler og agurkesalat; stegt flæsk med persillesovs; tacos med oksekød, bønner og salsa; shakshuka med brød; ovnstegt hel kylling med rodfrugter; dahl med kokosmælk og naan; frikadeller med kartofler og brun sovs.
+
+## Ugen som helhed
+- Ingen ret gentages. Højst 1 pastaret og højst 2 retter med samme hovedprotein. Ikke samme protein to dage i træk.
+- Variér køkken: overvejende dansk, plus italiensk, asiatisk, mexicansk eller mellemøstligt.
+- Mindst én klassisk dansk hverdagsret (frikadeller, stegt flæsk, biksemad, tarteletter, boller i karry).
+- Hverdage: retter på højst 30-40 minutter. Weekend må tage længere tid.
+- Planlæg med pakkestørrelser: varer købes i hele pakker. Brug resten af en pakke (fløde, hakket kød, kål, krydderurter) i en senere ret, og nævn det i "tip". Det er den vigtigste måde at holde prisen nede på.
+- Rester: en stor portion én dag kan blive til en ny ret senere (kylling → wraps). Nævn det i "tip".
+
+## Frokost og madpakker
+Hurtigt og gerne restebaseret: rugbrød med pålæg, wraps med gårsdagens kød, suppe, salat med protein.
+
+## Priser
+- Brug tilbudspriserne nøjagtigt. Brug realistiske danske normalpriser for resten, fx: løg 5 kr/stk, hvidløg 8 kr, parmesan 100 g 20 kr, fløde 20 kr, creme fraiche 15 kr, tomatpuré 10 kr, dåsebønner 12 kr, tortillas 18 kr, burgerboller 16 kr, ris 1 kg 15 kr, røde linser 20 kr, frosne ærter 15 kr, karrypasta 22 kr, rugbrød 25 kr, franskbrød 15 kr, yoghurt 18 kr, leverpostej 18 kr.
+- Køb ikke varer, som brugeren har i basislageret.
+- Indkøbslisten er det, brugeren faktisk køber: hele pakker, samlet pris pr. linje, grupperet pr. butik. total_price = summen af alle linjer.
+- price_per_person = rettens råvareforbrug delt med antal personer (ikke hele pakkens pris).
+- Et budget er et loft. Hold total_price under det, også hvis det betyder enklere retter.
+
+## Hårde krav fra brugeren
+Fravalgte ingredienser (allergi eller smag) må aldrig forekomme – heller ikke i sauce, tilbehør eller indkøbsliste. Kostpræferencer gælder hver eneste ret. Ingredienser, brugeren vil have med, skal med i mindst det ønskede antal retter.
+
+## Sprog og felter
+Skriv på dansk, kort og konkret, uden udråbstegn. "label" er ugedagen. "tip" og "kids_activity" er tomme strenge, når de ikke er relevante.`;
+
+// HTTP-fejl fra proxy → læsbar besked
+async function aiErrorFromResponse(res) {
+  const err = await res.json().catch(() => ({}));
+  const msg = typeof err.error === 'string' ? err.error : err.error?.message;
+  if (res.status === 401) return new Error('Du er blevet logget ud – log ind igen');
+  if (res.status === 429) return new Error(msg || 'For mange forespørgsler – prøv igen senere');
+  return new Error(msg || 'AI-fejl (' + res.status + ')');
+}
+
+function aiRequestBody({ model = AI_MODEL_PLAN, system, user, schema, max_tokens = 4000, stream = false }) {
+  const body = { model, max_tokens, messages: [{ role: 'user', content: user }] };
+  if (system) body.system = [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }];
+  if (schema) body.output_config = { format: { type: 'json_schema', schema } };
+  if (stream) body.stream = true;
+  return body;
+}
+
+// Ikke-streamet kald → parset JSON (med schema) eller tekst
+async function callClaude(opts) {
+  const res = await fetch('proxy.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(aiRequestBody(opts)),
+  });
+  if (!res.ok) throw await aiErrorFromResponse(res);
+  const data = await res.json();
+  if (data.type === 'error') throw new Error(data.error?.message || 'AI-fejl');
+  if (data.stop_reason === 'refusal') throw new Error('AI\'en kunne ikke svare på denne forespørgsel');
+  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  return opts.schema ? JSON.parse(text) : text;
+}
+
+// Streamet kald. Buffer linjer, så en "data:"-linje der deles over to
+// netværkspakker ikke tabes (det gav før tilfældige parse-fejl).
+async function streamClaude(opts, onText) {
+  const res = await fetch('proxy.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(aiRequestBody({ ...opts, stream: true })),
+  });
+  if (!res.ok) throw await aiErrorFromResponse(res);
+
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '', text = '', stopReason = null;
+
+  const handleLine = (line) => {
+    if (!line.startsWith('data:')) return;
+    const payload = line.slice(5).trim();
+    if (!payload || payload === '[DONE]') return;
+    let ev;
+    try { ev = JSON.parse(payload); } catch { return; }
+    if (ev.type === 'error') throw new Error(ev.error?.message || 'AI-fejl under generering');
+    if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+      text += ev.delta.text;
+      onText?.(text);
+    }
+    if (ev.type === 'message_delta' && ev.delta?.stop_reason) stopReason = ev.delta.stop_reason;
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    let nl;
+    while ((nl = buffer.indexOf('\n')) >= 0) {
+      handleLine(buffer.slice(0, nl).trim());
+      buffer = buffer.slice(nl + 1);
+    }
+    if (done) { handleLine(buffer.trim()); break; }
+  }
+
+  if (!text) throw new Error('Intet svar fra AI-tjenesten – prøv igen');
+  if (stopReason === 'max_tokens') throw new Error('Madplanen blev for lang. Prøv med færre dage eller måltider.');
+  if (stopReason === 'refusal') throw new Error('AI\'en kunne ikke lave denne madplan');
+  return { text, stopReason };
+}
+
+// ── Efterkontrol: tal regnes i koden, krav tjekkes ────────────────────────────
+function normalizeWord(s) { return String(s || '').toLowerCase().trim(); }
+
+function validatePlan(plan, settings) {
+  const warnings = [];
+
+  // Prisen = summen af indkøbslisten (AI'en er ikke god til at lægge sammen)
+  const itemsTotal = (plan.shopping_list || [])
+    .flatMap(s => s.items || [])
+    .reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+  if (itemsTotal > 0) plan.total_price = Math.round(itemsTotal);
+  if (plan.savings && plan.total_price) plan.savings = Math.min(Math.round(plan.savings), plan.total_price);
+
+  const budget = Number(settings.budget) || 0;
+  if (budget && plan.total_price > budget) {
+    warnings.push(`Indkøbet koster ca. ${plan.total_price - budget} kr mere end dit budget på ${budget} kr. Udskift en dyr ret for at komme ned.`);
+  }
+
+  const meals = (plan.plan || []).flatMap(d => (d.meals || []).map(m => ({ ...m, _day: d.label })));
+  const mealText = m => normalizeWord(`${m.name} ${m.description}`);
+
+  settings.prefs.filter(p => p.type === 'exclude').forEach(p => {
+    const w = normalizeWord(p.ingredient);
+    if (!w) return;
+    const hits = meals.filter(m => mealText(m).includes(w)).map(m => m._day);
+    const listHits = (plan.shopping_list || []).flatMap(s => s.items || []).filter(it => normalizeWord(it.name).includes(w));
+    if (hits.length || listHits.length) {
+      warnings.push(`"${p.ingredient}" skulle være fravalgt, men indgår${hits.length ? ' ' + [...new Set(hits)].join(', ') : ' på indkøbslisten'}. Udskift retten.`);
+    }
+  });
+
+  settings.prefs.filter(p => p.type === 'include' && p.count).forEach(p => {
+    const w = normalizeWord(p.ingredient);
+    const n = meals.filter(m => mealText(m).includes(w)).length;
+    if (n < Number(p.count)) warnings.push(`Du ønskede ${p.ingredient} i ${p.count} retter – planen har ${n}.`);
+  });
+
+  plan._warnings = warnings;
+  return plan;
+}
+
+// ─── GENERATE PLAN (madplan) ─────────────────────────────────────────────────
 
 async function generatePlan() {
 
@@ -903,236 +1134,69 @@ async function generatePlan() {
     .map(p => p.ingredient).join(', ');
 
   const optLabels = {
-    cheap:    'Gør det så billigt som muligt – spred indkøb på tværs af tilbud i alle valgte butikker',
-    one:      'Find den ENKELT billigste butik at handle det hele i – anbefal en enkelt butik til alt',
-    balanced: 'God balance – lav pris OG variation i retterne, ikke kun det billigste',
-    quality:  'Bedst mulig kvalitet inden for budgettet – friske råvarer, sæsonvarer, mangfoldige retter',
+    cheap:    'Billigst muligt – følg tilbuddene på tværs af alle valgte butikker.',
+    one:      'Alt i én butik – vælg den butik, hvor hele kurven samlet er billigst, og køb alt dér.',
+    balanced: 'Balance – lav pris, men med tydelig variation i retterne.',
+    quality:  'Kvalitet først – sæsonens og de bedste råvarer inden for budgettet.',
   };
+  const dayNames = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag', 'Mandag (uge 2)', 'Tirsdag (uge 2)', 'Onsdag (uge 2)', 'Torsdag (uge 2)', 'Fredag (uge 2)', 'Lørdag (uge 2)', 'Søndag (uge 2)'];
+  const lines = (arr) => arr.filter(Boolean).join('\n');
 
-  const dayNames = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag', 'Dag 8', 'Dag 9', 'Dag 10', 'Dag 11', 'Dag 12', 'Dag 13', 'Dag 14'];
+  const kidsBlock = settings.kids.enabled ? `
+## Lav mad med børn
+Barnet er ${settings.kids.age} år og kan hjælpe med: ${settings.kids.skills.join(', ')}.
+Alle aftensretter får en "kids_activity": én alderssvarende opgave på højst 2 sætninger, med simple ord og konkrete handlinger.${settings.kids.age === '3-5' ? ' Ingen knive og ingen varme til denne alder.' : ''}${settings.kids.age === '14+' ? ' Barnet kan stå for et helt trin selv.' : ''}
+Vælg gerne retter, hvor børn naturligt kan være med (tacos, pizza, frikadeller, wraps, salater).` : '';
 
-  const prompt = `Du er Danmarks bedste madplanlægger – en kombination af professionel kok og budgetekspert. Du laver madplaner i stil med Bilkas ugentlige madplaner: gennemtænkte, lækre hverdagsretter hvor ingredienserne hænger kulinarisk KORREKT sammen.
+  const recipeBlock = scoredRecipes.length ? `
+## Forslag fra vores opskriftskartotek
+Disse retter passer bedst til ugens tilbud. Brug mindst ${Math.min(Math.ceil(settings.days * 0.6), scoredRecipes.length)} af dem som aftensmad:
+${scoredRecipes.slice(0, 8).map((r, i) => `${i + 1}. ${r.name} (tilbudsvarer der hører til: ${r.matched.join(', ')})`).join('\n')}` : catalogHint;
 
-════════════════════════════════════
-KULINARISKE GRUNDREGLER – OVERHOLD ALTID
-════════════════════════════════════
-
-FORBUDTE KOMBINATIONER – lav dem ALDRIG:
-• Pasta + hakkebøf direkte – det hedder bolognese og kræver tomatsauce som bindemiddel
-• To proteiner i samme ret (fx laks + kylling, eller tun + æg i samme varm ret)
-• Asiatiske saucer på dansk tilbehør (fx soya på kartofler)
-• Ris til italienske retter, pasta til asiatiske retter
-• Grød som aftensmad, eller tung varm ret som morgenmad
-
-TÆNK I KOMPLETTE RETTER med smagsprofil:
-Hver ret = protein + tilbehør + sauce/grøntsag der hænger NATURLIGT sammen.
-
-Gode eksempler på velfungerende retter:
-• Hakket oksekød → Spaghetti bolognese med tomatsauce og parmesan
-• Kyllingefilet → Citronkylling med ris og dampet broccoli
-• Kyllingefilet → Kylling tikka masala med basmatiris og raita
-• Laks → Ovnbagt laks med dild, kogte kartofler og agurke-cremefraiche
-• Svinekød → Pulled pork i burgerboller med coleslaw og pickles
-• Hakket oksekød → Mexicansk tacofyld med bønner, salsa, ost i tortillas
-• Torsk → Paneret fiskefilet med remoulade, pommes frites og ærter
-• Æg → Shakshuka: æg pocheret i krydret tomatsauce, serveret med brød
-• Hel kylling → Ovnstegt med rosmarin, hvidløg, rodfrugter og kartofler
-• Svinekam → Stegt med persillesovs og kogte kartofler (klassisk dansk)
-• Linser → Dahl med kokosmælk, karry, basmatiris og naan
-• Tun → Tunmelt på ristet brød med smeltet ost og tomat
-
-UGEPLANLÆGNING – variation er nøglen:
-• Variér protein: ikke kylling to dage i træk
-• Variér køkken: 2-3 dage dansk, 1-2 dage italiensk/pasta, 1 dag asiatisk, 1 dag mex/wrap
-• Brug rester smart: stor portion mandag → rester i ny ret onsdag (fx kylling → kyllingewrap)
-• Inkludér mindst én klassisk dansk hverdagsret: frikadeller, stegt flæsk, biksemad, tarteletter
-
-MORGENMAD – enkelt og realistisk:
-• Havregrød med bær/æbler/banan og evt. nødder
-• Yoghurt naturel med müsli og frisk frugt
-• Franskbrød eller rugbrød med smør, ost og pålæg
-• Scrambled eggs eller røræg med brød og tomat
-• Smoothiebowl med yoghurt og granola
-
-FROKOST – hurtig og gerne restebaseret:
-• Rugbrød med pålæg (leverpostej, makrel, ost, æg)
-• Wrap/sandwich med gårsdagens protein
-• Suppe (ev. fra fryseren)
-• Salat med protein (tun, æg, kylling)
-
-════════════════════════════════════
-PARAMETRE FOR DENNE MADPLAN
-════════════════════════════════════
-
-• Antal dage: ${settings.days} (${dayNames.slice(0, settings.days).join(', ')})
-• Antal personer: ${settings.persons}
-• Valgte butikker: ${selectedShopNames.join(', ')}
-• Måltider der ønskes: ${settings.mealTypes.join(', ')}
-• Optimeringstilstand: ${optLabels[settings.optimizeMode]}
-${settings.budget ? '• MAX BUDGET: ' + settings.budget + ' kr i alt – dette MÅ IKKE overskrides' : '• Intet fast budget – vær fornuftig'}
-${settings.dietTags.length ? '• Kostpræferencer (OBLIGATORISK overhold): ' + settings.dietTags.join(', ') : ''}
-${settings.pantry.length ? '• Basislager hjemme – KØB IKKE disse: ' + settings.pantry.join(', ') : ''}
-${includeRules ? '• SKAL indgå i planen: ' + includeRules : ''}
-${excludeRules ? '• MÅ ALDRIG bruges – allergi/fravalg: ' + excludeRules : ''}
-${recentMeals.length ? '• UNDGÅ disse retter – brugt de seneste uger: ' + recentMeals.slice(0, 14).join(', ') : ''}
-${getSeasonalHint()}
-${getSeasonOffersCrossRef(settings.shops)}
-${getWeekdayHint(settings.days)}
-• VARIATIONSREGEL: Ingen ret gentages i denne plan. Brug max 1 pastabaseret ret og max 2 retter med samme protein. Varier køkken: dansk / italiensk / asiatisk / mexicansk / mellemøstligt.
-• BUTIKSBEGRÆNSNING: Brug KUN produkter og tilbud fra: ${selectedShopNames.join(', ')} – ignorer alle andre butikker i dine svar.
-${settings.kids.enabled ? `
-════════════════════════════════════
-LAV MAD MED BØRN — OBLIGATORISKE TRIN
-════════════════════════════════════
-
-Barnets alder: ${settings.kids.age} år
-Barnets bidrag: ${settings.kids.skills.join(', ')}
-
-For HVER aftensmadsret skal du tilføje et ekstra felt "kids_activity" i JSON-outputtet med:
-• En kort, alderssvarende opgave barnet kan løse (maks 2 sætninger)
-• Brug simple ord og konkrete handlinger
-• Match opgaven til barnets bidragsniveau: ${settings.kids.skills.join(', ')}
-
-Eksempel for alder ${settings.kids.age} år:
-- "vask-skær" → "Vask karruerne under den kolde vandhane og hjælp med at rive dem i stykker"
-- "røre-blande" → "Rør saucen rundt med træskeen mens den bobler – tæl til 20 hvert omrøring!"
-- "komfur" → "Hjælp en voksen med at vende kødet i panden – hold godt fat i grebet"
-- "anrette" → "Pynt tallerknerne med et par blade frisk basilikum og drys parmesan på"
-
-Vælg aktiviteter der passer til alderen – for 3-5 år: enkle og sikre opgaver uden varme; for 14+: selvstændige trin.` : ''}
-
-${scoredRecipes.length ? `════════════════════════════════════
-OPSKRIFTSKARTOTEK — ANBEFALEDE RETTER I DAG
-════════════════════════════════════
-
-Disse retter fra vores kartotek bruger flest ingredienser fra aktuelle tilbud.
-Vælg mindst ${Math.min(Math.ceil(settings.days * 0.6), scoredRecipes.length)} af disse som aftensmad i planen:
-
-${scoredRecipes.slice(0, 8).map((r, i) =>
-    `${i + 1}. ${r.name}
-   Tilbudsvarer der hører naturligt til i denne ret: ${r.matched.join(', ')}`
-  ).join('\n')}
-
-KULINARISK REGEL (OVERHOLD ALTID):
-Brug KUN tilbudsvarer der er AUTENTISKE ingredienser i den valgte ret.
-Eksempler på hvad der ALDRIG må ske:
-• Broccoli tilhører IKKE tikka masala, tacos, bolognese eller biksemad
-• Laks tilhører IKKE pasta carbonara, lasagne eller kylling-wok
-• Kokosmælk tilhører IKKE klassiske danske retter som frikadeller eller stegt flæsk
-• Chili tilhører IKKE citronkylling, frikadeller eller ovnkylling
-Hvis en tilbudsvare IKKE fremgår af rettenens naturlige ingredienser ovenfor — brug den IKKE.
-
-` : catalogHint}════════════════════════════════════
-TILBUDSAVISER — KUN DISSE BUTIKKER: ${selectedShopNames.join(', ')}
-════════════════════════════════════
-
-${getFilteredOffersText(settings.shops)}
-
-Normalpriser (ikke på tilbud):
-- Løg: 5 kr/stk, Hvidløg: 8 kr/hoved
-- Parmesan 100g: 20 kr, Fløde: 20 kr, Creme fraiche: 15 kr
-- Tomatpuré tube: 10 kr, Dåsebønner: 12 kr, Majs: 10 kr
-- Tortillas 8 stk: 18 kr, Burgerboller 4 stk: 16 kr
-- Ris 1kg: 15 kr, Couscous 500g: 18 kr, Røde linser: 20 kr
-- Frosne ærter 450g: 15 kr, Karrypasta: 22 kr
-- Rugbrød: 25 kr, Franskbrød: 15 kr, Müsli 500g: 22 kr
-- Yoghurt naturel 500g: 18 kr, Leverpostej 200g: 18 kr
-
-════════════════════════════════════
-OUTPUT – KUN JSON, INTET ANDET
-════════════════════════════════════
-
-Svar UDELUKKENDE med ét valid JSON-objekt. Ingen markdown. Ingen backticks. Ingen forklaringstekst. Kun JSON.
-
-{
-  "plan": [
-    {
-      "day": 1,
-      "label": "Mandag",
-      "meals": [
-        {
-          "type": "Aftensmad",
-          "name": "Spaghetti bolognese",
-          "description": "Klassisk kødsauce med hakket oksekød, løg, hvidløg og hakkede tomater – serveret med spaghetti og revet parmesan",
-          "store": "Netto + Rema 1000",
-          "price_per_person": 28,
-          "tags": ["Familiefavorit", "Fryseegnet"],
-          "on_sale": true,
-          "tip": "Lav dobbelt portion og frys den ene halvdel – perfekt til en travl dag",
-          "kids_activity": "Riv osten og drys den over spaghettien – se den smelte ned i den varme sauce!"
-        }
-      ]
-    }
-  ],
-  "shopping_list": [
-    {
-      "store": "Netto",
-      "items": [
-        {"name": "Spaghetti 500g", "amount": "2 pakker", "price": 16, "on_sale": true, "used_in": "Bolognese, Pasta primavera"},
-        {"name": "Hakkede tomater", "amount": "3 dåser", "price": 21, "on_sale": true, "used_in": "Bolognese, Shakshuka"}
-      ]
-    }
-  ],
-  "total_price": 620,
-  "savings": 145,
-  "recommended_store": "Netto",
-  "weekly_theme": "Klassisk hverdagsmad med internationalt twist",
-  "summary": "En veltilrettelagt uge med variation: dansk klassiker tirsdag, italiensk pasta onsdag, asiatisk karry torsdag og mexicansk fredag. Udnytter stærke tilbud på kylling fra Netto og laks fra Rema 1000."
-}`;
+  const userPrompt = lines([
+    `Lav en madplan ud fra disse ønsker.`,
+    ``,
+    `## Ønsker`,
+    `- Dage: ${settings.days} (${dayNames.slice(0, settings.days).join(', ')})`,
+    `- Personer: ${settings.persons}`,
+    `- Måltider pr. dag: ${settings.mealTypes.join(', ') || 'Aftensmad'}`,
+    `- Butikker (brug kun disse): ${selectedShopNames.join(', ')}`,
+    `- Prioritet: ${optLabels[settings.optimizeMode]}`,
+    settings.budget ? `- Budget: højst ${settings.budget} kr i alt` : `- Budget: intet fast loft – hold det fornuftigt`,
+    settings.dietTags.length ? `- Kost (gælder alle retter): ${settings.dietTags.join(', ')}` : '',
+    includeRules ? `- Skal med: ${includeRules}` : '',
+    excludeRules ? `- MÅ IKKE forekomme (allergi/fravalg): ${excludeRules}` : '',
+    settings.pantry.length ? `- Har allerede hjemme (køb ikke): ${settings.pantry.join(', ')}` : '',
+    recentMeals.length ? `- Spist for nylig (undgå): ${recentMeals.slice(0, 14).join(', ')}` : '',
+    getSeasonalHint(),
+    getSeasonOffersCrossRef(settings.shops),
+    getWeekdayHint(settings.days),
+    kidsBlock,
+    recipeBlock,
+    ``,
+    `## Ugens tilbud i ${selectedShopNames.join(', ')}`,
+    getFilteredOffersText(settings.shops),
+  ]);
 
   try {
-    const response = await fetch('proxy.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 8000,
-        stream: true,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || 'API-fejl: ' + response.status);
-    }
-
-    const reader   = response.body.getReader();
-    const decoder  = new TextDecoder();
-    let streamText = '';
+    let firstText = true;
     const renderedDayNums = new Set();
     const collectedDays   = [];
 
-    // Remove loading bar once stream starts
-    loadingEl?.remove();
+    const { text } = await streamClaude({
+      model: AI_MODEL_PLAN,
+      system: PLAN_SYSTEM_PROMPT,
+      user: userPrompt,
+      schema: PLAN_SCHEMA,
+      max_tokens: Math.min(16000, 2500 + settings.days * settings.mealTypes.length * 650),
+    }, (soFar) => {
+      if (firstText) { loadingEl?.remove(); firstText = false; }
+      tryRenderStreamedDays(soFar, collectedDays, renderedDayNums);
+    });
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      for (const line of chunk.split('\n')) {
-        if (!line.startsWith('data: ')) continue;
-        const d = line.slice(6).trim();
-        if (d === '[DONE]') continue;
-        try {
-          const ev = JSON.parse(d);
-          if (ev.type === 'content_block_delta') {
-            streamText += ev.delta?.text || '';
-            tryRenderStreamedDays(streamText, collectedDays, renderedDayNums);
-          }
-        } catch { /* ignore malformed SSE lines */ }
-      }
-    }
+    const parsed = validatePlan(JSON.parse(text), settings);
 
-    // Stream complete — parse full response for metadata + shopping list
-    let clean = streamText.replace(/```json|```/g, '').trim();
-    let parsed;
-    try { parsed = JSON.parse(clean); }
-    catch { const m = clean.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); }
-
-    if (!parsed) throw new Error('Kunne ikke parse AI-svar');
-
-    // Render any days that weren't caught during streaming
+    // Dage der ikke nåede at blive vist under streaming
     (parsed.plan || []).forEach((day, idx) => {
       if (!renderedDayNums.has(day.day)) renderSingleDayCard(day, idx);
     });
@@ -1150,7 +1214,6 @@ Svar UDELUKKENDE med ét valid JSON-objekt. Ingen markdown. Ingen backticks. Ing
       <div class="empty-icon">⚠️</div>
       <div class="empty-text">Madplanen kunne ikke laves</div>
       <div class="empty-sub" style="color:var(--berry-600);margin-top:12px">${escHtml(e.message)}</div>
-      <div class="empty-sub" style="margin-top:8px">Prøv igen om lidt. Sker det igen, så log ud og ind.</div>
       <button onclick="generatePlan()" class="btn-primary" style="margin-top:1.25rem;max-width:220px">Prøv igen</button>
     `;
   }
@@ -1524,6 +1587,7 @@ async function swapMeal(dayIdx, mealIdx) {
   const offersText  = getFilteredOffersText(settings.shops);
   const dietStr     = settings.dietTags.length ? settings.dietTags.join(', ') : 'ingen';
   const budgetNote  = meal.price_per_person ? `ca. ${meal.price_per_person} kr/person` : 'tilpas budgettet';
+  const excludeList = settings.prefs.filter(p => p.type === 'exclude').map(p => p.ingredient).join(', ');
 
   const prompt = `Du er madplanekspert. Ret der skal udskiftes: "${meal.name}" (${meal.type}, ${day.label}).
 
@@ -1535,41 +1599,35 @@ Krav til de 3 alternativer:
 • Alle retter skal være kulinarisk korrekte og komplette (protein + tilbehør + sauce)
 • Brug aktuelle tilbud når muligt
 • Alternativerne skal være FORSKELLIGE fra hinanden og fra originalretten
+• Ugens øvrige retter (gentag dem ikke): ${currentPlan.plan.flatMap(d => d.meals.map(m => m.name)).filter(n => n !== meal.name).join(', ')}
 
 Aktuelle tilbud (kun valgte butikker):
-${offersText}
-
-Svar KUN med ét validt JSON-objekt. Ingen markdown, ingen forklaringer.
-
-{
-  "alternatives": [
-    {
-      "name": "Ret navn",
-      "description": "Ret og tilbehør der hænger kulinarisk korrekt sammen",
-      "store": "Butiksnavn",
-      "price_per_person": 35,
-      "tags": ["Tag"],
-      "on_sale": false,
-      "vegetarian": false
-    }
-  ]
-}`;
+${offersText}`;
 
   try {
-    const res  = await fetch('proxy.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+    const altSchema = {
+      type: 'object', additionalProperties: false, required: ['alternatives'],
+      properties: { alternatives: { type: 'array', items: {
+        type: 'object', additionalProperties: false,
+        required: ['name', 'description', 'store', 'price_per_person', 'tags', 'on_sale', 'vegetarian'],
+        properties: {
+          name: { type: 'string' }, description: { type: 'string' }, store: { type: 'string' },
+          price_per_person: { type: 'number' }, tags: { type: 'array', items: { type: 'string' } },
+          on_sale: { type: 'boolean' }, vegetarian: { type: 'boolean' },
+        },
+      } } },
+    };
+    const parsed = await callClaude({
+      model: AI_MODEL_PLAN,
+      system: PLAN_SYSTEM_PROMPT,           // samme cachede regler som madplanen
+      user: prompt + (excludeList ? `\n• MÅ IKKE indeholde: ${excludeList}` : ''),
+      schema: altSchema,
+      max_tokens: 1500,
     });
-    if (!res.ok) throw new Error('API-fejl: ' + res.status);
-    const data = await res.json();
-    let text   = (data.content || []).map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
-    const m    = text.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(m ? m[0] : text);
-    renderAlternatives(parsed.alternatives || []);
+    renderAlternatives((parsed.alternatives || []).slice(0, 3));
   } catch (e) {
     document.getElementById('swap-loading').innerHTML =
-      `<div style="text-align:center;padding:1rem"><div style="font-size:2rem;margin-bottom:8px">⚠️</div><div style="color:var(--berry-600);font-size:14px">${e.message}</div><button onclick="closeSwapModal()" style="margin-top:1rem;padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);cursor:pointer;font-family:var(--font-body)">Luk</button></div>`;
+      `<div class="empty-state" style="padding:1.5rem 0"><div class="empty-icon">⚠️</div><div class="empty-sub" style="color:var(--berry-600)">${escHtml(e.message)}</div><button class="btn-ghost" style="margin-top:1rem" onclick="closeSwapModal()">Luk</button></div>`;
   }
 }
 
@@ -1597,8 +1655,10 @@ function applyAlternative(altIdx) {
   const { dayIdx, mealIdx } = swapContext;
   const mealType = currentPlan.plan[dayIdx].meals[mealIdx].type;
   currentPlan.plan[dayIdx].meals[mealIdx] = { ...swapAlts[altIdx], type: mealType };
+  validatePlan(currentPlan, gatherSettings());   // opdatér advarsler efter udskiftning
   closeSwapModal();
   renderPlan(currentPlan);
+  showToast('Retten er udskiftet – tjek indkøbslisten');
 }
 
 function closeSwapModal() {
@@ -1708,7 +1768,7 @@ OUTPUT – KUN JSON, INTET ANDET:
     const res  = await fetch('proxy.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 6000, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: AI_MODEL_PLAN, max_tokens: 6000, messages: [{ role: 'user', content: prompt }] }),
     });
     if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || 'API-fejl: ' + res.status); }
     const data = await res.json();
@@ -2179,28 +2239,16 @@ async function fetchRecipeSteps(name, ingredients, numPersons) {
 
   try {
     const ingList = ingredients.length ? `\nIngredienser: ${ingredients.join(', ')}` : '';
-    const res = await fetch('proxy.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 700,
-        messages: [{
-          role: 'user',
-          content: `Lav en kort trin-for-trin fremgangsmåde til "${name}" til ${numPersons} person${numPersons > 1 ? 'er' : ''}.${ingList}
-
-Svar KUN med en JSON-array af strings (max 7 trin), fx:
-["Skær løg og hvidløg i små tern.", "Brun kødet på høj varme i 3–4 min.", "..."]
-Vær konkret og kortfattet. Ingen tal-præfikser i strengene.`
-        }]
-      })
+    const { steps } = await callClaude({
+      model: AI_MODEL_FAST,
+      user: `Skriv en kort fremgangsmåde til "${name}" til ${numPersons} person${numPersons > 1 ? 'er' : ''}.${ingList}
+Højst 7 trin. Hvert trin er én konkret sætning med tid/temperatur hvor relevant. Ingen nummerering i teksten.`,
+      schema: {
+        type: 'object', additionalProperties: false, required: ['steps'],
+        properties: { steps: { type: 'array', items: { type: 'string' } } },
+      },
+      max_tokens: 700,
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const text = data?.content?.[0]?.text || '';
-    const match = text.match(/\[[\s\S]*?\]/);
-    if (!match) throw new Error('no json array');
-    const steps = JSON.parse(match[0]);
     if (!Array.isArray(steps) || !steps.length) throw new Error('empty');
     localStorage.setItem(key, JSON.stringify({ steps, ts: Date.now() }));
     renderRecipeSteps(steps);

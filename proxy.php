@@ -53,10 +53,72 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// ── Streaming mode ────────────────────────────────────────────────────────────
+// ── Request → Anthropic payload ───────────────────────────────────────────────
+// Kun godkendte modeller (ellers kunne en bruger vælge en dyr model selv)
+const MP_MODELS        = ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-sonnet-4-6'];
+const MP_DEFAULT_MODEL = 'claude-sonnet-5-5';
+const MP_MAX_TOKENS    = 16000;
+
 $rawBody = file_get_contents('php://input');
 $reqData = json_decode($rawBody ?: '{}', true);
 
+if (!is_array($reqData) || !isset($reqData['messages']) || !is_array($reqData['messages'])) {
+    http_response_code(400);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Ugyldigt request-format']);
+    exit;
+}
+
+function mp_build_payload(array $req, bool $stream): array {
+    $model = in_array($req['model'] ?? '', MP_MODELS, true) ? $req['model'] : MP_DEFAULT_MODEL;
+    $p = [
+        'model'      => $model,
+        'max_tokens' => max(1, min((int)($req['max_tokens'] ?? 8000), MP_MAX_TOKENS)),
+        'messages'   => $req['messages'],
+    ];
+    if ($stream) $p['stream'] = true;
+
+    // System-prompt: streng eller tekstblokke (evt. med cache_control: ephemeral)
+    if (isset($req['system'])) {
+        if (is_string($req['system'])) {
+            $p['system'] = $req['system'];
+        } elseif (is_array($req['system'])) {
+            $blocks = [];
+            foreach ($req['system'] as $b) {
+                if (!is_array($b) || ($b['type'] ?? '') !== 'text' || !is_string($b['text'] ?? null)) continue;
+                $blk = ['type' => 'text', 'text' => $b['text']];
+                if (($b['cache_control']['type'] ?? '') === 'ephemeral') $blk['cache_control'] = ['type' => 'ephemeral'];
+                $blocks[] = $blk;
+            }
+            if ($blocks) $p['system'] = $blocks;
+        }
+    }
+
+    // Struktureret output (JSON schema) – kun format-feltet sendes videre
+    $fmt = $req['output_config']['format'] ?? null;
+    if (is_array($fmt) && ($fmt['type'] ?? '') === 'json_schema' && is_array($fmt['schema'] ?? null)) {
+        $p['output_config'] = ['format' => ['type' => 'json_schema', 'schema' => $fmt['schema']]];
+    }
+    return $p;
+}
+
+function mp_curl(array $payload) {
+    $ch = curl_init('https://api.anthropic.com/v1/messages');
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($payload),
+        CURLOPT_HTTPHEADER     => [
+            'Content-Type: application/json',
+            'x-api-key: ' . ANTHROPIC_API_KEY,
+            'anthropic-version: 2023-06-01',
+        ],
+        CURLOPT_TIMEOUT        => 180,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+    return $ch;
+}
+
+// ── Streaming mode ────────────────────────────────────────────────────────────
 if (!empty($reqData['stream'])) {
     while (ob_get_level()) ob_end_clean();
     @ini_set('output_buffering', '0');
@@ -65,29 +127,17 @@ if (!empty($reqData['stream'])) {
     header('Cache-Control: no-cache');
     header('X-Accel-Buffering: no');
 
-    if (!isset($reqData['messages'])) {
-        echo "data: {\"error\":\"no messages\"}\n\n"; exit;
-    }
-
-    $streamPayload = json_encode([
-        'model'      => $reqData['model'] ?? 'claude-sonnet-4-6',
-        'max_tokens' => min((int)($reqData['max_tokens'] ?? 8000), 8000), // cap på 8000
-        'stream'     => true,
-        'messages'   => $reqData['messages'],
-    ]);
-
-    $ch = curl_init('https://api.anthropic.com/v1/messages');
+    $ch = mp_curl(mp_build_payload($reqData, true));
+    $status  = 0;
+    $errBody = '';
     curl_setopt_array($ch, [
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $streamPayload,
-        CURLOPT_HTTPHEADER     => [
-            'Content-Type: application/json',
-            'x-api-key: ' . ANTHROPIC_API_KEY,
-            'anthropic-version: 2023-06-01',
-        ],
-        CURLOPT_TIMEOUT        => 120,
-        CURLOPT_SSL_VERIFYPEER => true,
-        CURLOPT_WRITEFUNCTION  => function($ch, $data) {
+        // Fang HTTP-status, så API-fejl (fx 529 overbelastet) kan sendes som SSE-fejl
+        CURLOPT_HEADERFUNCTION => function($ch, $header) use (&$status) {
+            if (preg_match('#^HTTP/\S+\s+(\d{3})#', $header, $m)) $status = (int)$m[1];
+            return strlen($header);
+        },
+        CURLOPT_WRITEFUNCTION  => function($ch, $data) use (&$status, &$errBody) {
+            if ($status >= 400) { $errBody .= $data; return strlen($data); }
             echo $data;
             @ob_flush();
             @flush();
@@ -95,40 +145,27 @@ if (!empty($reqData['stream'])) {
         },
     ]);
     curl_exec($ch);
+    $curlErr = curl_error($ch);
     curl_close($ch);
-    exit;
-}
-// ── End streaming mode ────────────────────────────────────────────────────────
 
-$data = $reqData;
-
-if (!$data || !isset($data['messages'])) {
-    http_response_code(400);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Ugyldigt request-format']);
+    if ($curlErr || $status >= 400) {
+        $msg = $curlErr ? 'Forbindelsen til AI-tjenesten fejlede' : mp_error_message($status, $errBody);
+        echo 'data: ' . json_encode(['type' => 'error', 'error' => ['message' => $msg]]) . "\n\n";
+        @flush();
+    }
     exit;
 }
 
-$payload = json_encode([
-    'model'      => $data['model'] ?? 'claude-sonnet-4-6',
-    'max_tokens' => min((int)($data['max_tokens'] ?? 8000), 8000),
-    'messages'   => $data['messages'],
-]);
+function mp_error_message(int $status, string $body): string {
+    if ($status === 429) return 'AI-tjenesten har travlt lige nu – prøv igen om et minut';
+    if ($status === 529 || $status >= 500) return 'AI-tjenesten er overbelastet – prøv igen om lidt';
+    $j = json_decode($body, true);
+    return 'AI-fejl (' . $status . '): ' . ($j['error']['message'] ?? 'ukendt fejl');
+}
 
-$ch = curl_init('https://api.anthropic.com/v1/messages');
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST           => true,
-    CURLOPT_POSTFIELDS     => $payload,
-    CURLOPT_HTTPHEADER     => [
-        'Content-Type: application/json',
-        'x-api-key: ' . ANTHROPIC_API_KEY,
-        'anthropic-version: 2023-06-01',
-    ],
-    CURLOPT_TIMEOUT        => 120,
-    CURLOPT_SSL_VERIFYPEER => true,
-]);
-
+// ── Almindeligt (ikke-streamet) kald ──────────────────────────────────────────
+$ch = mp_curl(mp_build_payload($reqData, false));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 $result   = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlErr  = curl_error($ch);
