@@ -58,6 +58,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 const MP_MODELS        = ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-sonnet-4-6'];
 const MP_DEFAULT_MODEL = 'claude-sonnet-5-5';
 const MP_MAX_TOKENS    = 16000;
+// Sonnet/Haiku 5.5 "tænker" som standard før de svarer (skjult, men tæller med i
+// max_tokens og koster tokens). Det gav tomme svar/timeouts. Vi slår den
+// forudgående tænkning fra – værdien er forskellig pr. model (forkert værdi = 400).
+const MP_THINKING_OFF = [
+    'claude-sonnet-5-5' => ['type' => 'between_tools'],
+    'claude-haiku-5-5'  => ['type' => 'disabled'],
+];
 
 $rawBody = file_get_contents('php://input');
 $reqData = json_decode($rawBody ?: '{}', true);
@@ -77,6 +84,7 @@ function mp_build_payload(array $req, bool $stream): array {
         'messages'   => $req['messages'],
     ];
     if ($stream) $p['stream'] = true;
+    if (isset(MP_THINKING_OFF[$model])) $p['thinking'] = MP_THINKING_OFF[$model];
 
     // System-prompt: streng eller tekstblokke (evt. med cache_control: ephemeral)
     if (isset($req['system'])) {

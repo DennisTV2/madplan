@@ -862,6 +862,7 @@ function finalizePlanUI(plan) {
 // Modeller (proxy.php godkender kun disse)
 const AI_MODEL_PLAN = 'claude-sonnet-5-5';   // madplan, udskiftning
 const AI_MODEL_FAST = 'claude-haiku-5-5';    // korte opgaver: fremgangsmåde
+const AI_MODEL_FALLBACK = 'claude-sonnet-4-6'; // bruges kun hvis første forsøg kommer tomt tilbage
 
 // JSON-schema → API'et garanterer gyldig JSON (ingen "kunne ikke parse").
 // Alle felter er required, så rækkefølgen holdes: dage streames først.
@@ -1014,7 +1015,7 @@ async function streamClaude(opts, onText) {
 
   const reader  = res.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = '', text = '', stopReason = null;
+  let buffer = '', text = '', stopReason = null, events = 0, raw = '';
 
   const handleLine = (line) => {
     if (!line.startsWith('data:')) return;
@@ -1022,6 +1023,7 @@ async function streamClaude(opts, onText) {
     if (!payload || payload === '[DONE]') return;
     let ev;
     try { ev = JSON.parse(payload); } catch { return; }
+    events++;
     if (ev.type === 'error') throw new Error(ev.error?.message || 'AI-fejl under generering');
     if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
       text += ev.delta.text;
@@ -1032,7 +1034,9 @@ async function streamClaude(opts, onText) {
 
   while (true) {
     const { done, value } = await reader.read();
-    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const chunk = decoder.decode(value || new Uint8Array(), { stream: !done });
+    if (raw.length < 400) raw += chunk;
+    buffer += chunk;
     let nl;
     while ((nl = buffer.indexOf('\n')) >= 0) {
       handleLine(buffer.slice(0, nl).trim());
@@ -1041,9 +1045,20 @@ async function streamClaude(opts, onText) {
     if (done) { handleLine(buffer.trim()); break; }
   }
 
-  if (!text) throw new Error('Intet svar fra AI-tjenesten – prøv igen');
-  if (stopReason === 'max_tokens') throw new Error('Madplanen blev for lang. Prøv med færre dage eller måltider.');
   if (stopReason === 'refusal') throw new Error('AI\'en kunne ikke lave denne madplan');
+  if (stopReason === 'max_tokens') throw new Error('Madplanen blev for lang. Prøv med færre dage eller måltider.');
+  if (!text) {
+    // Beskriv hvad der faktisk skete, så fejlen kan findes
+    if (!events) {
+      const hint = raw.trim().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 140);
+      const err = new Error('Serveren afbrød forbindelsen, før AI\'en svarede' + (hint ? ` (${hint})` : ''));
+      err.retryable = true;
+      throw err;
+    }
+    const err = new Error(`AI'en sendte intet indhold (${events} hændelser, stop: ${stopReason || 'ukendt'})`);
+    err.retryable = true;
+    throw err;
+  }
   return { text, stopReason };
 }
 
@@ -1183,8 +1198,8 @@ ${scoredRecipes.slice(0, 8).map((r, i) => `${i + 1}. ${r.name} (tilbudsvarer der
     const renderedDayNums = new Set();
     const collectedDays   = [];
 
-    const { text } = await streamClaude({
-      model: AI_MODEL_PLAN,
+    const planRequest = (model) => streamClaude({
+      model,
       system: PLAN_SYSTEM_PROMPT,
       user: userPrompt,
       schema: PLAN_SCHEMA,
@@ -1193,6 +1208,16 @@ ${scoredRecipes.slice(0, 8).map((r, i) => `${i + 1}. ${r.name} (tilbudsvarer der
       if (firstText) { loadingEl?.remove(); firstText = false; }
       tryRenderStreamedDays(soFar, collectedDays, renderedDayNums);
     });
+
+    let text;
+    try {
+      ({ text } = await planRequest(AI_MODEL_PLAN));
+    } catch (err) {
+      // Tomt svar → ét automatisk forsøg med reservemodellen, før vi viser en fejl
+      if (!err.retryable || !firstText) throw err;
+      console.warn('[MadPlan] Tomt svar – prøver reservemodel:', err.message);
+      ({ text } = await planRequest(AI_MODEL_FALLBACK));
+    }
 
     const parsed = validatePlan(JSON.parse(text), settings);
 
