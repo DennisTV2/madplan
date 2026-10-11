@@ -7,6 +7,11 @@
 <title>MadPlan — madplan efter ugens tilbud</title>
 <meta name="description" content="Lav en uges madplan efter ugens tilbud i Netto, Rema 1000 og flere – med indkøbsliste, budget og opskrifter.">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<meta property="og:title" content="MadPlan – ugens madplan efter ugens tilbud">
+<meta property="og:description" content="Madplan, indkøbsliste og budget bygget på tilbuddene i Netto, Rema 1000 og flere.">
+<meta property="og:image" content="icons/icon-512.png">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="da_DK">
 <link rel="stylesheet" href="style.css?v=7">
 
   <!-- PWA -->
@@ -30,6 +35,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Geist:wght@400..700&display=swap" rel="stylesheet">
 </head>
 <body>
+<a class="skip-link" href="#main-content">Spring til indhold</a>
 
 <!-- SPLASH (vises mens session tjekkes) -->
 <div id="splash-screen" aria-busy="true">
@@ -97,7 +103,7 @@
     </header>
 
     <!-- MAIN CONTENT -->
-    <main class="main">
+    <main class="main" id="main-content" tabindex="-1">
 
       <!-- PAGE: NY MADPLAN -->
       <div class="page active" id="page-plan">

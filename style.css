@@ -2864,3 +2864,82 @@ button, [role="button"], .tag, .shop-card, .opt-btn, .nav-item, .kids-age-chip,
   border: 2px solid var(--primary-border); border-top-color: var(--primary);
   animation: spin 0.8s linear infinite; flex-shrink: 0;
 }
+
+/* ═══ Billeder: ægte retter (Wikipedia) eller ensartet illustration ═══ */
+.ico { width: 1.25em; height: 1.25em; flex-shrink: 0; vertical-align: -0.2em; }
+
+.photo-slot { position: relative; overflow: hidden; isolation: isolate; }
+.day-card-photo-wrap.photo-slot { height: 176px; }
+.recipe-card-media.photo-slot { width: 68px; height: 68px; border-radius: 14px; flex-shrink: 0; }
+
+/* Illustration: samme ramme, farve og streg for alle rettyper */
+.dish-illu {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  color: var(--primary);
+  background:
+    radial-gradient(90% 80% at 30% 20%, color-mix(in srgb, var(--card) 70%, transparent), transparent 70%),
+    var(--primary-bg);
+}
+.dish-illu .ico { width: 44px; height: 44px; stroke-width: 1.4; }
+.dish-illu span { font-size: 12px; font-weight: 500; letter-spacing: 0.02em; color: var(--primary-dark); opacity: 0.8; }
+.dish-illu--fish    { color: #3F6E78; background-color: #E3ECEC; }
+.dish-illu--pasta   { color: #8A6420; background-color: #F2E8D4; }
+.dish-illu--soup    { color: #8A5A2B; background-color: #F1E5D6; }
+.dish-illu--meat    { color: #8E4A35; background-color: #F2E3DC; }
+.dish-illu--chicken { color: #93642A; background-color: #F3E9D9; }
+.dish-illu--sun     { color: #93732A; background-color: #F4ECD6; }
+.dish-illu--fish span, .dish-illu--pasta span, .dish-illu--soup span, .dish-illu--meat span,
+.dish-illu--chicken span, .dish-illu--sun span { color: inherit; }
+@media (prefers-color-scheme: dark) {
+  .dish-illu--fish    { color: #9CC3CA; background-color: #1C2A2C; }
+  .dish-illu--pasta   { color: #D9B878; background-color: #2B2518; }
+  .dish-illu--soup    { color: #D6A87A; background-color: #2C2218; }
+  .dish-illu--meat    { color: #DDA18D; background-color: #2E1F1A; }
+  .dish-illu--chicken { color: #DDB47C; background-color: #2C2419; }
+  .dish-illu--sun     { color: #DCC17E; background-color: #2B2618; }
+}
+.recipe-card-media .dish-illu { gap: 0; }
+.recipe-card-media .dish-illu .ico { width: 30px; height: 30px; }
+.recipe-card-media .dish-illu span { display: none; }
+
+/* Fotos lægges ovenpå illustrationen og toner ind – ingen spring i layoutet.
+   Fælles farvebehandling giver fotos fra forskellige kilder samme udtryk. */
+.day-card-photo, .recipe-card-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+  filter: saturate(0.9) contrast(1.04) sepia(0.06);
+  transition: opacity 360ms ease, transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1;
+}
+.day-card-photo.is-loading, .recipe-card-photo.is-loading { opacity: 0; transform: scale(1.03); }
+.day-card-photo-wrap.photo-slot:has(img:not(.is-loading))::after {
+  content: ''; position: absolute; inset: auto 0 0 0; height: 45%; z-index: 2; pointer-events: none;
+  background: linear-gradient(to top, rgba(20, 16, 10, 0.35), transparent);
+}
+.photo-credit {
+  position: absolute; right: 8px; bottom: 6px; z-index: 3;
+  max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; color: rgba(255, 255, 255, 0.82); text-decoration: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.recipe-card-media .photo-credit { display: none; }   /* vises i stort format i stedet */
+.day-card-photo-credit { display: none; }
+
+/* Ikoner i tomme tilstande og knapper */
+.empty-icon { opacity: 1; color: var(--slate-400); font-size: inherit; margin-bottom: 0.75rem; }
+.empty-icon .ico { width: 40px; height: 40px; stroke-width: 1.4; }
+.shopping-cta-icon { color: var(--primary); display: grid; place-items: center; }
+.shopping-cta-icon .ico { width: 26px; height: 26px; }
+.custom-items-label .ico, .action-btn .ico { width: 16px; height: 16px; }
+.rd-category .ico { width: 15px; height: 15px; margin-right: 2px; }
+.dish-illu.day-card-photo-placeholder, .dish-illu.recipe-card-photo-placeholder { width: 100%; height: 100%; border-radius: 0; font-size: inherit; }
+.skip-link {
+  position: absolute; left: 1rem; top: -100px; z-index: var(--z-toast);
+  padding: 10px 16px; border-radius: var(--r-sm);
+  background: var(--primary); color: var(--on-primary); font-weight: 600; text-decoration: none;
+}
+.skip-link:focus { top: calc(1rem + env(safe-area-inset-top, 0px)); }
+#main-content:focus { outline: none; }
