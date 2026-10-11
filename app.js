@@ -713,7 +713,7 @@ function buildShoppingCtaHTML(plan) {
   return `
     <div class="shopping-cta" role="button" tabindex="0" onclick="showPage('indkob')" onkeydown="if(event.key==='Enter')showPage('indkob')">
       <div class="shopping-cta-left">
-        <div class="shopping-cta-icon">🛒</div>
+        <div class="shopping-cta-icon">${icon('cart')}</div>
         <div>
           <div class="shopping-cta-title">Indkøbslisten er klar</div>
           <div class="shopping-cta-sub">${totalItems} varer i ${storeCount} butik${storeCount !== 1 ? 'ker' : ''}${plan.total_price ? ' · ca. ' + escHtml(plan.total_price) + ' kr' : ''}</div>
@@ -773,8 +773,8 @@ function extractCompleteObjects(text) {
 function buildDayCardHTML(day, dayIdx) {
   let h = `
     <div class="day-card" id="real-day-${day.day}">
-      <div class="day-card-photo-wrap" id="photo-day-${day.day}">
-        <div class="day-card-photo-placeholder">${getDayEmoji(day.day)}</div>
+      <div class="day-card-photo-wrap photo-slot" id="photo-day-${day.day}">
+        ${dishIllustration(mainMealOf(day)?.name || '', '', 'day-card-photo-placeholder')}
       </div>
       <div class="day-card-body">
         <div class="day-label">Dag ${day.day}</div>
@@ -817,16 +817,7 @@ function renderSingleDayCard(day, dayIdx) {
     if (container) container.insertAdjacentHTML('beforeend', html);
   }
   document.getElementById('real-day-' + day.day)?.classList.add('is-arriving');
-  // Kick off photo fetch for this day immediately
-  const dinner = (day.meals || []).find(m => m.type === 'Aftensmad');
-  if (dinner) {
-    fetchMealPhoto(dinner.name).then(photo => {
-      const slot = document.getElementById('photo-day-' + day.day);
-      if (!slot || !photo?.url) return;
-      slot.innerHTML = `<img class="day-card-photo" src="${photo.url}" alt="${dinner.name}" loading="lazy">
-        <div class="day-card-photo-credit"><a href="${photo.link}" target="_blank" rel="noopener noreferrer">${photo.credit}</a></div>`;
-    });
-  }
+  showDayPhoto(day);
 }
 
 // ── TRY TO EXTRACT & RENDER STREAMED DAYS ─────────────────────────────────────
@@ -858,6 +849,55 @@ function finalizePlanUI(plan) {
 
 // ─── GENERATE PLAN ────────────────────────────────────────────────────────────
 
+// ─── IKONER (ét sæt, samme stregtykkelse – erstatter emoji, der ser
+//     forskellige ud på iPhone/Android) ─────────────────────────────────────────
+const ICONS = {
+  fish:    '<path d="M3 12c3-4.5 7-6 11-6 3 0 5.5 2 7 6-1.5 4-4 6-7 6-4 0-8-1.5-11-6z"/><path d="M3 12l-1.5-3M3 12l-1.5 3"/><circle cx="16.5" cy="10.5" r=".9" fill="currentColor"/>',
+  pasta:   '<path d="M4 13h16a8 8 0 0 1-16 0z"/><path d="M8 13c0-4 2-6 4-6s3 1.5 3 3-1 2.5-2.5 2.5S10 11 10 9.5"/><path d="M17 4l-3 9"/>',
+  soup:    '<path d="M3 11h18a9 7 0 0 1-18 0z"/><path d="M8 7c0-1.5 1-1.5 1-3M12 7c0-1.5 1-1.5 1-3M16 7c0-1.5 1-1.5 1-3"/><path d="M9 21h6"/>',
+  leaf:    '<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19l7-7"/>',
+  chicken: '<path d="M14.5 4.5a5 5 0 0 1 5 5c0 3-2.5 5.5-5.5 5.5-1 0-1.5.5-2 1l-3 3"/><path d="M14.5 4.5a5 5 0 0 0-5 5c0 1.5-.5 2-1 2.5L6 14.5"/><path d="M6 14.5l-1.8 1.8a1.6 1.6 0 1 0 2.3 2.3M9 19.5l-1.8 1.8a1.6 1.6 0 1 1-2.3-2.3"/>',
+  meat:    '<path d="M4.5 11.5C4.5 7 8.5 4 13 4c4.5 0 7 3 7 6.5 0 5.5-5 9.5-10.5 9.5C6.5 20 4 18 4 15.5c0-1.6 1.6-2.4.5-4z"/><path d="M8 12.5c1.6-2.5 4.6-3.6 7.5-2.8"/><ellipse cx="14.5" cy="14.5" rx="1.8" ry="1.3"/>',
+  bowl:    '<path d="M3 11h18a9 7.5 0 0 1-18 0z"/><path d="M7 11c.5-3 2.5-5 5-5s4.5 2 5 5"/><path d="M9 21h6"/>',
+  sun:     '<circle cx="12" cy="13" r="4"/><path d="M12 4v2M5 7l1.4 1.4M19 7l-1.4 1.4M3 13h2M19 13h2M4 19h16"/>',
+  cart:    '<path d="M3 4h2.5l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.3"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17.5" cy="19.5" r="1.3"/>',
+  alert:   '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.5"/>',
+  search:  '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/>',
+  book:    '<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v16H6.5A1.5 1.5 0 0 0 5 20.5z"/><path d="M5 20.5A1.5 1.5 0 0 0 6.5 22H19"/>',
+  plate:   '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/>',
+  copy:    '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
+  bag:     '<path d="M5 8h14l-1 12.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20.5z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
+};
+function icon(name, cls = '') {
+  return `<svg class="ico ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.plate}</svg>`;
+}
+
+// Rettens type ud fra navnet – bruges til illustrationen, når der ikke er et ægte foto
+function dishKind(name = '', category = '') {
+  const n = ' ' + name.toLowerCase() + ' ';
+  if (/grød|yoghurt|müsli|havre|smoothie|røræg|pandekage|morgen/.test(n)) return 'sun';
+  if (/suppe/.test(n)) return 'soup';
+  if (category === 'fisk' || /laks|torsk|fisk|rejer|tun |sild|rødspætte|ørred|krabbe|sushi|rejer/.test(n)) return 'fish';
+  if (category === 'pasta' || /pasta|spaghetti|lasagn|linguine|gnocchi|orzo|tortellini|ziti|penne|nudl|ramen/.test(n)) return 'pasta';
+  if (category === 'vegetar' || /vegetar|vegan|linse|kikært|falafel|dahl|dhal|tofu|halloumi|grøntsag|blomkål|svampe/.test(n)) return 'leaf';
+  if (/kylling|chicken|høns|kalkun|and /.test(n)) return 'chicken';
+  if (category === 'kød' || category === 'klassisk' || /okse|svin|flæsk|bøf|frikadel|pølse|lam|kalv|mørbrad|kotelet|kød|steak/.test(n)) return 'meat';
+  return 'bowl';
+}
+const DISH_KIND_LABEL = { sun: 'Morgenmad', soup: 'Suppe', fish: 'Fisk', pasta: 'Pasta', leaf: 'Grønt', chicken: 'Kylling', meat: 'Kød', bowl: 'Hverdagsmad' };
+
+function dishIllustration(name, category, cls = '') {
+  const kind = dishKind(name, category);
+  return `<div class="dish-illu dish-illu--${kind} ${cls}" aria-hidden="true">${icon(kind)}<span>${DISH_KIND_LABEL[kind]}</span></div>`;
+}
+
+// Ægte foto (fra Wikipedia) – fader ind, når det er hentet; credit er påkrævet af licensen
+function dishPhotoHTML(photo, alt, cls) {
+  return `<img class="${cls} is-loading" src="${escHtml(photo.url)}" alt="${escHtml(alt)}" loading="lazy" decoding="async"
+      onload="this.classList.remove('is-loading')" onerror="this.closest('.photo-slot')?.classList.add('photo-failed');this.remove()">
+    <a class="photo-credit" href="${escHtml(photo.link || '#')}" target="_blank" rel="noopener noreferrer">${escHtml(photo.credit || 'Wikipedia')}</a>`;
+}
+
 // ─── AI-MODUL ─────────────────────────────────────────────────────────────────
 // Modeller (proxy.php godkender kun disse)
 const AI_MODEL_PLAN = 'claude-sonnet-5-5';   // madplan, udskiftning
@@ -869,10 +909,11 @@ const AI_MODEL_FALLBACK = 'claude-sonnet-4-6'; // bruges kun hvis første forsø
 const MEAL_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'name', 'description', 'store', 'price_per_person', 'tags', 'on_sale', 'tip', 'kids_activity'],
+  required: ['type', 'name', 'dish_en', 'description', 'store', 'price_per_person', 'tags', 'on_sale', 'tip', 'kids_activity'],
   properties: {
     type:             { type: 'string', description: 'Morgenmad, Frokost, Aftensmad eller Snacks' },
     name:             { type: 'string' },
+    dish_en:          { type: 'string', description: 'Rettens titel på engelsk Wikipedia, fx "Chicken tikka masala" eller "Frikadeller" – kun for kendte retter, ellers tom streng' },
     description:      { type: 'string', description: 'Én sætning: protein, tilbehør og sauce/grønt' },
     store:            { type: 'string', description: 'Butikken hvor hovedingredienserne købes' },
     price_per_person: { type: 'number', description: 'Råvarepris for retten delt med antal personer, i kr.' },
@@ -969,7 +1010,7 @@ Hurtigt og gerne restebaseret: rugbrød med pålæg, wraps med gårsdagens kød,
 Fravalgte ingredienser (allergi eller smag) må aldrig forekomme – heller ikke i sauce, tilbehør eller indkøbsliste. Kostpræferencer gælder hver eneste ret. Ingredienser, brugeren vil have med, skal med i mindst det ønskede antal retter.
 
 ## Sprog og felter
-Skriv på dansk, kort og konkret, uden udråbstegn. "label" er ugedagen. "tip" og "kids_activity" er tomme strenge, når de ikke er relevante.`;
+Skriv på dansk, kort og konkret, uden udråbstegn. "label" er ugedagen. "dish_en" er den nøjagtige titel på engelsk Wikipedia for kendte retter (bruges til at finde et billede af præcis den ret) – ellers en tom streng; gæt ikke. "tip" og "kids_activity" er tomme strenge, når de ikke er relevante.`;
 
 // HTTP-fejl fra proxy → læsbar besked
 async function aiErrorFromResponse(res) {
@@ -1236,7 +1277,7 @@ ${scoredRecipes.slice(0, 8).map((r, i) => `${i + 1}. ${r.name} (tilbudsvarer der
     document.getElementById('plan-output').style.display = 'none';
     document.getElementById('result-empty').style.display = '';
     document.getElementById('result-empty').innerHTML = `
-      <div class="empty-icon">⚠️</div>
+      <div class="empty-icon">${icon('alert')}</div>
       <div class="empty-text">Madplanen kunne ikke laves</div>
       <div class="empty-sub" style="color:var(--berry-600);margin-top:12px">${escHtml(e.message)}</div>
       <button onclick="generatePlan()" class="btn-primary" style="margin-top:1.25rem;max-width:220px">Prøv igen</button>
@@ -1382,7 +1423,7 @@ function renderHistory() {
   if (!userHistory.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">📚</div>
+        <div class="empty-icon">${icon('book')}</div>
         <div class="empty-text">Ingen historik endnu</div>
         <div class="empty-sub">Dine madplaner gemmes automatisk her</div>
       </div>`;
@@ -1652,7 +1693,7 @@ ${offersText}`;
     renderAlternatives((parsed.alternatives || []).slice(0, 3));
   } catch (e) {
     document.getElementById('swap-loading').innerHTML =
-      `<div class="empty-state" style="padding:1.5rem 0"><div class="empty-icon">⚠️</div><div class="empty-sub" style="color:var(--berry-600)">${escHtml(e.message)}</div><button class="btn-ghost" style="margin-top:1rem" onclick="closeSwapModal()">Luk</button></div>`;
+      `<div class="empty-state" style="padding:1.5rem 0"><div class="empty-icon">${icon('alert')}</div><div class="empty-sub" style="color:var(--berry-600)">${escHtml(e.message)}</div><button class="btn-ghost" style="margin-top:1rem" onclick="closeSwapModal()">Luk</button></div>`;
   }
 }
 
@@ -1805,7 +1846,7 @@ OUTPUT – KUN JSON, INTET ANDET:
   } catch (e) {
     loading.style.display = 'none';
     empty.style.display   = 'block';
-    empty.innerHTML = `<div class="empty-icon">⚠️</div><div class="empty-text">Noget gik galt</div><div class="empty-sub" style="color:var(--berry-600)">${e.message}</div>`;
+    empty.innerHTML = `<div class="empty-icon">${icon('alert')}</div><div class="empty-text">Noget gik galt</div><div class="empty-sub" style="color:var(--berry-600)">${e.message}</div>`;
   } finally {
     genBtn.disabled = false;
   }
@@ -1911,168 +1952,48 @@ function scoreRecipesAgainstOffers(shops, dietTags = []) {
 
 // ─── FOOD PHOTOS ──────────────────────────────────────────────────────────────
 
-function getDayEmoji(dayNum) {
-  const emojis = ['🍽️','🥘','🍲','🫕','🥗','🍱','🫔','🥙','🍜','🥩','🐟','🥚','🧆','🌮'];
-  return emojis[(dayNum - 1) % emojis.length];
+// Hovedretten for en dag (aftensmad, ellers første måltid)
+function mainMealOf(day) {
+  return (day?.meals || []).find(m => m.type === 'Aftensmad') || (day?.meals || [])[0] || null;
 }
 
-const PHOTO_QUERIES = [
-  // Klassisk dansk
-  ['frikadeller',               'danish meatballs brown gravy potatoes'],
-  ['hakkebøf',                  'hamburger steak onion gravy potatoes'],
-  ['stegt flæsk',               'danish fried pork belly parsley sauce'],
-  ['flæskesteg',                'pork roast red cabbage caramelized potatoes'],
-  ['biksemad',                  'hash potatoes fried egg pan'],
-  ['æggekage',                  'danish egg cake bacon omelette skillet'],
-  ['karbonader',                'pork chop potato salad remoulade'],
-  ['labskovs',                  'beef potato stew nordic'],
-  ['medisterpølse',             'pork sausage red cabbage danish'],
-  ['svinekam',                  'roast pork loin parsley sauce potatoes'],
-  ['boller i karry',            'meatballs curry sauce rice danish'],
-  ['brændende kærlighed',       'mashed potatoes bacon caramelized onion'],
-  ['pølseret',                  'sausage potatoes mustard sauce'],
-  ['mørbradgryde',              'pork tenderloin mushroom cream sauce'],
-  ['baconruller',               'bacon rolls potato casserole baked'],
-  ['tærte med porre',           'quiche leek bacon tart'],
-  // Kød & kylling
-  ['hel kylling',               'whole roast chicken rosemary root vegetables'],
-  ['citronkylling',             'lemon chicken rice steamed vegetables'],
-  ['tikka masala',              'chicken tikka masala basmati rice'],
-  ['butter chicken',            'butter chicken naan bread'],
-  ['wok med kylling',           'chicken stir fry wok vegetables noodles'],
-  ['kyllingewrap',              'chicken wrap avocado herb tortilla'],
-  ['shawarma',                  'chicken shawarma pita wrap'],
-  ['kylling i fad',             'baked chicken thighs potatoes thyme'],
-  // Oksekød & international
-  ['bolognese',                 'spaghetti bolognese meat sauce parmesan'],
-  ['lasagne',                   'lasagna baked cheese bechamel'],
-  ['chili con carne',           'chili con carne rice sour cream'],
-  ['tacos',                     'beef tacos salsa guacamole mexican'],
-  ['burgere',                   'homemade burger fries beef'],
-  ['pulled pork',               'pulled pork burger coleslaw bun'],
-  // Fisk & skaldyr
-  ['ovnbagt laks',              'baked salmon dill potatoes cucumber'],
-  ['pasta med laks',            'salmon pasta cream dill'],
-  ['bagels med røget laks',     'bagel smoked salmon cream cheese dill'],
-  ['fiskefrikadeller',          'fish cakes remoulade potatoes danish'],
-  ['paneret torsk',             'breaded cod fish chips peas'],
-  ['fiskesuppe',                'creamy fish chowder vegetables dill'],
-  ['rejer',                     'garlic butter shrimp prawns bread lemon'],
-  // Pasta
-  ['carbonara',                 'pasta carbonara egg bacon parmesan'],
-  ['pesto',                     'pesto pasta chicken cherry tomatoes'],
-  ['linguine',                  'linguine shrimp garlic butter parsley'],
-  ['primavera',                 'pasta primavera spring vegetables cream'],
-  ['pasta med kylling',         'pasta chicken bacon spinach creamy'],
-  // Vegetar
-  ['linser dahl',               'red lentil dahl coconut milk naan'],
-  ['kikærtekarry',              'chickpea curry spinach coconut milk rice'],
-  ['kikærtegryde',              'chickpea stew tomato feta baked'],
-  ['grøntsagssuppe',            'homemade vegetable soup bread bowl'],
-  ['tomatsuppe',                'tomato soup cream croutons'],
-  ['falafler',                  'falafel hummus pita bread plate'],
-  ['risotto',                   'mushroom risotto parmesan herb'],
-  ['okonomiyaki',               'okonomiyaki japanese savory pancake'],
-  ['stegt ris',                 'fried rice egg vegetables wok'],
-  // ── Proteiner checkes FØR tilberedningsmåde ──────────────────────────────
-  // Kylling
-  ['kyllingebryst',             'chicken breast grilled plate herbs lemon'],
-  ['kyllingelår',               'chicken thighs roasted potatoes plate'],
-  ['kyllingefilet',             'chicken fillet pan-fried plate vegetables'],
-  ['kylling',                   'roast chicken dinner plate herbs vegetables'],
-  // Fisk & skaldyr
-  ['ørred',                     'trout fillet pan fried lemon dill plate'],
-  ['tun',                       'tuna steak seared plate vegetables'],
-  ['sild',                      'herring nordic rye bread plate'],
-  ['torsk',                     'cod fillet plate potatoes vegetables'],
-  ['laks',                      'salmon fillet lemon dill plate'],
-  ['fisk',                      'fish fillet dinner plate lemon vegetables'],
-  // Kød
-  ['oksekød',                   'beef stew plate potatoes vegetables'],
-  ['okse',                      'beef steak potatoes gravy plate'],
-  ['svinekød',                  'pork dinner potatoes gravy plate'],
-  ['svin',                      'pork chop potatoes plate'],
-  ['lammekølle',                'lamb leg roasted rosemary potatoes'],
-  ['lammekotelet',              'lamb chops rosemary plate'],
-  ['lam',                       'lamb chops rosemary potatoes plate'],
-  ['kalvekød',                  'veal dinner plate vegetables cream'],
-  ['kalkun',                    'turkey roast plate vegetables'],
-  ['and',                       'duck breast roasted plate orange sauce'],
-  ['tofu',                      'tofu vegetables asian plate healthy'],
-  ['æg',                        'egg dish poached fried plate'],
-  // ── Generiske madtyper ────────────────────────────────────────────────────
-  ['curry',                     'curry rice coconut milk spices'],
-  ['wok',                       'stir fry wok vegetables noodles'],
-  ['gryde',                     'stew pot hearty vegetables'],
-  ['suppe',                     'homemade soup bowl bread rustic'],
-  ['pasta',                     'pasta dish sauce parmesan plate'],
-  ['nudler',                    'noodles broth asian bowl'],
-  ['ris',                       'rice bowl garnish vegetables plate'],
-  ['pizza',                     'homemade pizza tomato cheese basil'],
-  ['tærte',                     'savory tart quiche crust plate'],
-  ['quiche',                    'quiche lorraine egg cheese tart'],
-  ['salat',                     'fresh salad bowl vegetables healthy'],
-  ['wrap',                      'wrap tortilla filling plate fresh'],
-  ['sandwich',                  'sandwich bread filling plate'],
-  ['toast',                     'toast sandwich melted cheese plate'],
-  ['bøf',                       'beef steak potatoes sauce plate'],
-  ['kotelet',                   'pork chop potato vegetables plate'],
-  ['filet',                     'fish fillet lemon butter plate'],
-  ['schnitzel',                 'schnitzel breaded veal potato salad'],
-  // ── Tilberedningsmåder — allersidst ───────────────────────────────────────
-  ['grillspyd',                 'grilled skewers kebab vegetables'],
-  ['grillet',                   'grilled meat vegetables plate'],
-  ['gratin',                    'gratin baked cheese crust dish'],
-  ['ovnbagt',                   'oven baked dish vegetables herbs'],
-  ['ovnstegt',                  'roasted oven dish potatoes herbs'],
-  ['ovnret',                    'casserole baked dish oven'],
-  ['dampet',                    'steamed vegetables fish plate light'],
-  ['paneret',                   'breaded fried crispy plate'],
-  ['friturestegt',              'deep fried crispy food plate'],
-];
-
-function getPhotoQuery(mealName) {
-  const n = mealName.toLowerCase();
-  for (const [keyword, query] of PHOTO_QUERIES) {
-    if (n.includes(keyword)) return query;
-  }
-  return 'food dinner plate homemade';
-}
-
-async function fetchMealPhoto(mealName) {
-  const key = 'mp_photo3_' + mealName.toLowerCase().replace(/[^a-z0-9æøå]/g, '_').slice(0, 60);
+// Billede til en ret: Wikipedia via photo.php. Samme ret → samme billede (cachet).
+async function fetchMealPhoto(mealName, dishEn = '') {
+  const key = 'mp_photo5_' + (mealName + '|' + dishEn).toLowerCase().replace(/[^a-z0-9æøå|]/g, '_').slice(0, 90);
   try {
     const cached = localStorage.getItem(key);
     if (cached) {
       const { data, ts } = JSON.parse(cached);
-      if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) return data; // 7-day TTL
+      const ttl = data?.url ? 30 : 3; // dage: fundet / ikke fundet
+      if (Date.now() - ts < ttl * 86400000) return data;
     }
   } catch { /* ignore */ }
   try {
-    const res = await fetch('photo.php?q=' + encodeURIComponent(getPhotoQuery(mealName)));
+    const qs = new URLSearchParams({ dish: mealName });
+    if (dishEn) qs.set('en', dishEn);
+    const res = await fetch('photo.php?' + qs);
     if (!res.ok) return null;
     const data = await res.json();
-    if (data.error) return null;
-    localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
+    try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch { /* fuld storage */ }
     return data;
   } catch {
     return null;
   }
 }
 
+function showDayPhoto(day) {
+  const meal = mainMealOf(day);
+  if (!meal) return Promise.resolve();
+  return fetchMealPhoto(meal.name, meal.dish_en).then(photo => {
+    const slot = document.getElementById('photo-day-' + day.day);
+    if (!slot || !photo?.url) return;
+    slot.insertAdjacentHTML('beforeend', dishPhotoHTML(photo, meal.name, 'day-card-photo'));
+  });
+}
+
 async function loadPlanPhotos() {
   if (!currentPlan?.plan) return;
-  const tasks = currentPlan.plan.map(day => {
-    const dinner = (day.meals || []).find(m => m.type === 'Aftensmad');
-    if (!dinner) return Promise.resolve();
-    return fetchMealPhoto(dinner.name).then(photo => {
-      const slot = document.getElementById('photo-day-' + day.day);
-      if (!slot || !photo?.url) return;
-      slot.innerHTML = `<img class="day-card-photo" src="${photo.url}" alt="${dinner.name}" loading="lazy">
-        <div class="day-card-photo-credit"><a href="${photo.link}" target="_blank" rel="noopener noreferrer">${photo.credit}</a></div>`;
-    });
-  });
-  await Promise.all(tasks);
+  await Promise.all(currentPlan.plan.map(showDayPhoto));
 }
 
 // ─── RECIPE CATALOG ───────────────────────────────────────────────────────────
@@ -2108,17 +2029,18 @@ function renderSavedRecipesSection() {
   if (!filtered.length) { container.innerHTML = ''; return; }
 
   container.innerHTML = `
-    <div class="saved-section-label">⭐ Mine gemte retter</div>
+    <div class="saved-section-label">Mine gemte retter</div>
     <div class="recipe-grid">${filtered.map(m => `
       <div class="recipe-card saved-recipe-card" onclick="showRecipeDetail(null,'${m.name.replace(/'/g,"\\'")}')">
-        ${recipePhotoHtml(RECIPES.find(r=>r.name===m.name)||null,'⭐')}
+        ${recipePhotoHtml(RECIPES.find(r=>r.name===m.name) || { name: m.name })}
         <div class="recipe-card-body">
-          <div class="recipe-card-name">${m.name}</div>
+          <div class="recipe-card-name">${escHtml(m.name)}</div>
           ${m.description ? `<div class="recipe-card-meta">${m.description.slice(0, 60)}${m.description.length > 60 ? '…' : ''}</div>` : ''}
         </div>
         <button class="delete-saved-btn" onclick="event.stopPropagation();deleteSavedMeal('${m.id}')" title="Fjern">×</button>
       </div>`).join('')}
     </div>`;
+  observeRecipePhotos(document.getElementById('saved-recipes-section') || document);
 }
 
 function renderRecipeCategoryFilter() {
@@ -2145,7 +2067,7 @@ function renderRecipeGrid() {
   }
   if (!filtered.length) {
     container.innerHTML = `<div class="empty-state" style="padding:2.5rem 0">
-      <div class="empty-icon">🔍</div>
+      <div class="empty-icon">${icon('search')}</div>
       <div class="empty-text">Ingen resultater for "${recipeSearchQuery}"</div>
       <div class="empty-sub">Prøv et andet ord — f.eks. en ingrediens eller kategori</div>
     </div>`;
@@ -2153,13 +2075,14 @@ function renderRecipeGrid() {
   }
   container.innerHTML = `<div class="recipe-grid">${filtered.map(r => `
     <div class="recipe-card" onclick="showRecipeDetail('${r.id}')">
-      ${recipePhotoHtml(r, getCategoryEmoji(r.category))}
+      ${recipePhotoHtml(r)}
       <div class="recipe-card-body">
         <div class="recipe-card-name">${r.name}</div>
         <div class="recipe-card-tags">${r.tags.slice(0, 2).map(t => `<span class="cat-chip">${t}</span>`).join('')}</div>
       </div>
       <div class="recipe-card-arrow">›</div>
     </div>`).join('')}</div>`;
+  observeRecipePhotos(container);
 }
 
 function filterRecipes(category) {
@@ -2178,7 +2101,7 @@ function showRecipeDetail(recipeId, overrideName = null) {
 
   document.getElementById('rd-name').textContent = name;
   document.getElementById('rd-category').innerHTML = r
-    ? `${getCategoryEmoji(r.category)} <span>${catDanish(r.category)}</span>`
+    ? `${icon(dishKind('', r.category))} <span>${catDanish(r.category)}</span>`
     : '🍽️ <span>Ret</span>';
 
   // Tags: dietary first, then regular tags
@@ -2306,34 +2229,27 @@ function getCategoryEmoji(category) {
   return map[category] || '🍽️';
 }
 
-// ─── RECIPE PHOTOS (Unsplash CDN — ingen API-nøgle nødvendig) ─────────────────
-const CATEGORY_PHOTO_POOL = {
-  klassisk:      ['1547592166-23ac45744acd','1574484284002-91d788b57bc6','1631515687347-4ec7bb79f2b9'],
-  kød:           ['1504674900247-0877df9cc836','1558030006-b6e0e1f67f3e','1603048588-18eff39220f4'],
-  pasta:         ['1551183053-bf91798d395d','1473093295043-ccedbae4eae','1621996346565-ead05ef34d78'],
-  vegetar:       ['1512621776951-a57141f2eefd','1540420773420-8b8e8d019375','1543362906-acfc16c67564'],
-  fisk:          ['1519708227418-1d7e627a5a6e','1565688534693-4b4dcaab8e24','1559847844-5315695dadae'],
-  internationalt:['1565557623262-b51c2513a641','1603360946369-dc9bb6258143','1534422298391-e4f8c172dddb'],
-};
-
-function recipePhotoHtml(recipe, emoji) {
-  const pool = recipe?.category ? (CATEGORY_PHOTO_POOL[recipe.category] || []) : [];
-  if (!pool.length) return `<div class="recipe-card-photo-placeholder">${emoji}</div>`;
-  // Deterministisk valg baseret på recipe ID — samme ret = samme billede
-  const s = recipe.id || recipe.name || '';
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = Math.imul((h << 5) + h, 1) + s.charCodeAt(i) | 0;
-  const photoId = pool[Math.abs(h) % pool.length];
-  const url = `https://images.unsplash.com/photo-${photoId}?auto=format&fit=crop&w=144&q=65`;
-  // Fallback via data-attribut – før knækkede citationstegnene HTML'en, når et billede fejlede
-  return `<img class="recipe-card-photo" src="${url}" loading="lazy" alt="" data-emoji="${escHtml(emoji)}" onerror="recipePhotoFallback(this)">`;
+// ─── RECIPE PHOTOS (Wikipedia, hentes først når kortet er synligt) ─────────────
+function recipePhotoHtml(recipe) {
+  const name = recipe?.name || '';
+  return `<div class="recipe-card-media photo-slot" data-dish="${escHtml(name)}">${dishIllustration(name, recipe?.category, 'recipe-card-photo-placeholder')}</div>`;
 }
 
-function recipePhotoFallback(img) {
-  const div = document.createElement('div');
-  div.className = 'recipe-card-photo-placeholder';
-  div.textContent = img.dataset.emoji || '🍽️';
-  img.replaceWith(div);
+let _photoObserver = null;
+function observeRecipePhotos(root = document) {
+  const slots = root.querySelectorAll('.recipe-card-media[data-dish]:not([data-loaded])');
+  if (!('IntersectionObserver' in window)) { slots.forEach(loadRecipePhoto); return; }
+  _photoObserver ??= new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { _photoObserver.unobserve(e.target); loadRecipePhoto(e.target); } });
+  }, { rootMargin: '200px' });
+  slots.forEach(el => _photoObserver.observe(el));
+}
+
+function loadRecipePhoto(slot) {
+  slot.dataset.loaded = '1';
+  fetchMealPhoto(slot.dataset.dish).then(photo => {
+    if (photo?.url) slot.insertAdjacentHTML('beforeend', dishPhotoHTML(photo, slot.dataset.dish, 'recipe-card-photo'));
+  });
 }
 
 // ─── SAVED MEALS / FAVORITES ─────────────────────────────────────────────────
@@ -2401,7 +2317,7 @@ function renderIndkob() {
   if (!currentPlan?.shopping_list?.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">🛒</div>
+        <div class="empty-icon">${icon('cart')}</div>
         <div class="empty-text">Ingen indkøbsliste endnu</div>
         <div class="empty-sub">Generer en madplan under Plan for at se din indkøbsliste her</div>
         <button onclick="showPage('plan')" class="btn-primary" style="margin-top:1.25rem">Gå til Plan</button>
@@ -2442,14 +2358,14 @@ function renderIndkob() {
   });
 
   html += `<div style="margin-top:1rem">
-    <button class="action-btn" style="width:100%;justify-content:center" onclick="exportShoppingList(window.currentPlan)">📋 Eksportér indkøbsliste</button>
+    <button class="action-btn" style="width:100%;justify-content:center" onclick="exportShoppingList(window.currentPlan)">${icon('copy')} Eksportér indkøbsliste</button>
   </div>`;
 
   // Custom items section
   const customItems = getCustomItems();
   html += `
     <div class="custom-items-section">
-      <div class="custom-items-label">🛍️ Egne varer</div>
+      <div class="custom-items-label">${icon('bag')} Egne varer</div>
       <div id="custom-items-list">
         ${customItems.map(item => `
           <div class="shop-item" id="row_ci_${item.id}">
