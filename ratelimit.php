@@ -76,12 +76,10 @@ function session_configure(): void {
 }
 
 /**
- * Returnerer en stabil IP-nøgle (håndterer proxies)
+ * Klientens IP. Vi stoler KUN på REMOTE_ADDR: X-Forwarded-For og lignende
+ * headers kan klienten selv sætte, og så kan alle IP-grænser omgås.
  */
 function rl_ip(): string {
-    $ip = $_SERVER['HTTP_CF_CONNECTING_IP']   // Cloudflare
-       ?? $_SERVER['HTTP_X_FORWARDED_FOR']
-       ?? $_SERVER['REMOTE_ADDR']
-       ?? 'unknown';
-    return explode(',', $ip)[0]; // kun første IP ved proxy-kæde
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : 'unknown';
 }

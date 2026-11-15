@@ -32,12 +32,18 @@ if (!rl_check($rlKey, $rlLimit, 3600)) {
     exit;
 }
 
-// ── CORS (kun eget domæne) ────────────────────────────────────────────────────
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if ($origin) {
-    header('Access-Control-Allow-Origin: ' . $origin);
-    header('Vary: Origin');
+// Samlet loft pr. døgn på tværs af alle brugere – beskytter API-regningen,
+// hvis nogen opretter mange konti. Justér tallet efter behov.
+const MP_DAILY_CAP = 300;
+if (!rl_check('proxy_global_day', MP_DAILY_CAP, 86400)) {
+    http_response_code(429);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Dagens AI-kvote er brugt – prøv igen i morgen']);
+    exit;
 }
+
+// ── CORS (kun eget domæne, se cors_send i ratelimit.php) ──────────────────────
+cors_send();
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
@@ -66,7 +72,15 @@ const MP_THINKING_OFF = [
     'claude-haiku-5-5'  => ['type' => 'disabled'],
 ];
 
-$rawBody = file_get_contents('php://input');
+// Loft på request-størrelse (input-tokens koster også)
+const MP_MAX_BODY = 400000; // bytes
+$rawBody = file_get_contents('php://input', false, null, 0, MP_MAX_BODY + 1);
+if ($rawBody !== false && strlen($rawBody) > MP_MAX_BODY) {
+    http_response_code(413);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Forespørgslen er for stor']);
+    exit;
+}
 $reqData = json_decode($rawBody ?: '{}', true);
 
 if (!is_array($reqData) || !isset($reqData['messages']) || !is_array($reqData['messages'])) {

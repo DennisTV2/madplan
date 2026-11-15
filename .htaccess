@@ -1,11 +1,25 @@
 # MadPlan — Simply.com .htaccess
 Options -Indexes
 
-# Blokér direkte adgang til config.php
-<Files "config.php">
-  Order allow,deny
-  Deny from all
-</Files>
+# Skjulte filer (.git, .env, .ftp-deploy-sync-state.json) og cache-mappen må aldrig serveres
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule (^|/)\.(?!well-known/) - [F,L]
+  RewriteRule ^cache/ - [F,L]
+</IfModule>
+
+# Konfiguration og udviklingsfiler må ikke kunne hentes
+<FilesMatch "^(config\.php|config\.example\.php|setup\.php|server\.js|package(-lock)?\.json|README\.md)$">
+  Require all denied
+</FilesMatch>
+
+# Sikkerhedsheaders
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
 
 # Gzip komprimering
 <IfModule mod_deflate.c>

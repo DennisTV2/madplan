@@ -40,6 +40,8 @@ jobs:
             package.json
             package-lock.json
             .env.example
+            setup.php
+            config.example.php
             cache/**
 
       - name: ✅ Deploy fuldført

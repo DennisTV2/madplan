@@ -81,6 +81,7 @@ if ($action === 'login') {
 
     // Demo-konto (ingen DB-kald)
     if ($email === 'demo@madplan.dk' && $password === 'demo123') {
+        session_regenerate_id(true); // Forhindr session fixation
         $_SESSION['mp_user'] = ['name' => 'Demo Bruger', 'email' => 'demo@madplan.dk'];
         echo json_encode(['user' => $_SESSION['mp_user']]);
         exit;

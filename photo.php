@@ -12,6 +12,8 @@
  * Resultatet caches på serveren, så samme ret altid får samme billede.
  */
 
+require_once __DIR__ . '/ratelimit.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: public, max-age=604800');
 
@@ -237,6 +239,13 @@ if (is_file($file)) {
     $cached = json_decode((string)file_get_contents($file), true);
     $ttl = empty($cached['url']) ? MP_TTL_MISS : MP_TTL_HIT;
     if (is_array($cached) && filemtime($file) > time() - $ttl) mp_out($cached);
+}
+
+// Nye opslag (ikke i cache) er begrænset pr. IP: endpointet kræver ikke login,
+// og hvert nyt opslag kalder Wikipedia og skriver en cache-fil.
+if (!rl_check('photo_' . rl_ip(), 60, 3600)) {
+    header('Cache-Control: no-store');
+    mp_out(['url' => null]);
 }
 
 // ── Opslag ─────────────────────────────────────────────────────────────────────
