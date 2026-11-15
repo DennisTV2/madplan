@@ -20,6 +20,7 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps  # krypteret forbindelse, så adgangskoden ikke sendes i klartekst
           # Simply.com subdomæne peger på /madplan
           server-dir: /madplan/
           local-dir: ./
